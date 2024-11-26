@@ -4,31 +4,31 @@ const AddBlogApproval = require("../models/AddBlogApproval.model");
 const router = express.Router();
 
 //Add a new blog for approval
+// router.post("/addApproval", async (req, res) => {
+//   try {
+//     const { title, body, username, type } = req.body;
+
+//     if (!title || !body || !username || !type) {
+//       return res.status(400).json({ error: "All fields are required." });
+//     }
+
+//     const newBlog = new AddBlogApproval({ title, body, username, type });
+
+//     const savedBlog = await newBlog.save();
+//     res
+//       .status(201)
+//       .json({ message: "Blog submitted for approval", data: savedBlog._id });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Internal server error." });
+//   }
+// });
+// Add a new blog for approval with check for duplicates
 router.post("/addApproval", async (req, res) => {
   try {
     const { title, body, username, type } = req.body;
 
     if (!title || !body || !username || !type) {
-      return res.status(400).json({ error: "All fields are required." });
-    }
-
-    const newBlog = new AddBlogApproval({ title, body, username, type });
-
-    const savedBlog = await newBlog.save();
-    res
-      .status(201)
-      .json({ message: "Blog submitted for approval", data: savedBlog._id });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error." });
-  }
-});
-// Add a new blog for approval with check for duplicates
-router.post("/addApproval", async (req, res) => {
-  try {
-    const { title, body, username } = req.body;
-
-    if (!title || !body || !username) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
