@@ -3,26 +3,6 @@ const AddBlogApproval = require("../models/AddBlogApproval.model");
 
 const router = express.Router();
 
-//Add a new blog for approval
-// router.post("/addApproval", async (req, res) => {
-//   try {
-//     const { title, body, username, type } = req.body;
-
-//     if (!title || !body || !username || !type) {
-//       return res.status(400).json({ error: "All fields are required." });
-//     }
-
-//     const newBlog = new AddBlogApproval({ title, body, username, type });
-
-//     const savedBlog = await newBlog.save();
-//     res
-//       .status(201)
-//       .json({ message: "Blog submitted for approval", data: savedBlog._id });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// });
 // Add a new blog for approval with check for duplicates
 router.post("/addApproval", async (req, res) => {
   try {
@@ -60,34 +40,6 @@ router.post("/addApproval", async (req, res) => {
     res.status(500).json({ error: "Internal server error." });
   }
 });
-
-// router.route("/addApproval").post(async (req, res) => {
-//   try {
-//     const { title, body, type } = req.body; // Include the type field
-//     const { username } = req.decoded; // Retrieve username from the decoded token
-
-//     if (!type) {
-//       return res.status(400).json({ error: "Blog type is required." });
-//     }
-
-//     // Create a new blog entry
-//     const newBlog = new AddBlogApproval({
-//       title,
-//       body,
-//       username,
-//       type, // Save the type field
-//     });
-
-//     const savedBlog = await newBlog.save();
-
-//     res
-//       .status(201)
-//       .json({ message: "Blog submitted for approval", data: savedBlog._id });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// });
 
 // Assuming you're using Node.js with Express
 router.get("/requests", async (req, res) => {

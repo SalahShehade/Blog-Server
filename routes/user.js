@@ -139,17 +139,30 @@ router.route("/register").post(async (req, res) => {
     });
 
     await newUser.save();
-    res.status(200).json("User registered successfully");
+    // Generate a JWT token
+    const payload = {
+      id: newUser._id,
+      username: newUser.username,
+      email: newUser.email,
+      role: newUser.role,
+    };
+
+    const token = jwt.sign(payload, config.key, { expiresIn: "1h" }); // Token valid for 1 hour
+
+    res.status(200).json({
+      msg: "User registered successfully",
+      token: token,
+    });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
 });
 
-router.route("/update/:username").patch(async (req, res) => {
+router.route("/update/:email").patch(async (req, res) => {
   //forgot password part...................................
   try {
     const result = await User.findOneAndUpdate(
-      { username: req.params.username },
+      { email: req.params.email },
       { $set: { password: req.body.password } },
       { new: true } // this option returns the updated document
     );
@@ -160,7 +173,7 @@ router.route("/update/:username").patch(async (req, res) => {
 
     const msg = {
       msg: "Password successfully updated!",
-      username: req.params.username,
+      email: req.params.email,
     };
     return res.json(msg);
   } catch (err) {

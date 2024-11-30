@@ -4,7 +4,6 @@ const path = require("path");
 //hello world
 const PORT = process.env.PORT || 5000;
 const app = express();
-
 const cors = require("cors");
 //app.use(cors({ origin: "http://localhost:57308" })); // Replace with your web app's URL
 app.use(cors({ origin: "*" })); // Allow requests from any origin
