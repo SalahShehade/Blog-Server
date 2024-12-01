@@ -23,6 +23,11 @@ const User = Schema({
     enum: ["user", "customer", "admin"], // Role options
     default: "user", // Default to 'user'
   },
+
+  verified: {
+    type: Boolean,
+    default: false, // Default is not verified
+  },
 });
 
 module.exports = mongoose.model("User", User);

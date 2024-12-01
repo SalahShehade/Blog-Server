@@ -6,6 +6,64 @@ const middleware = require("../middleware");
 
 const router = express.Router();
 
+// Add a field to track if the user is verified
+router.route("/verify/:email").get(async (req, res) => {
+  try {
+    console.log("Incoming request to /verify/:email");
+    console.log("req.params:", req.params);
+
+    const email = req.params.email;
+    if (!email) {
+      console.error("Email not provided in params");
+      return res.status(400).json({ msg: "Email is required" });
+    }
+
+    const result = await User.findOneAndUpdate(
+      { email: email },
+      { $set: { verified: true } },
+      { new: true }
+    );
+
+    if (!result) {
+      console.error("No user found with email:", email);
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    console.log("User successfully verified:", result);
+    res.status(200).json({ msg: "User successfully verified!" });
+  } catch (err) {
+    console.error("Error in /verify/:email:", err.message);
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+// Route to check if the user is verified
+router.route("/isVerified/:email").get(async (req, res) => {
+  try {
+    console.log("Incoming request to /isVerified/:email");
+    console.log("req.params:", req.params);
+
+    const email = req.params.email;
+    if (!email) {
+      console.error("Email not provided in params");
+      return res.status(400).json({ msg: "Email is required" });
+    }
+
+    const result = await User.findOne({ email: email });
+
+    if (!result) {
+      console.error("No user found with email:", email);
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    console.log("Verification status for user:", result.verified);
+    res.status(200).json({ verified: result.verified });
+  } catch (err) {
+    console.error("Error in /isVerified/:email:", err.message);
+    res.status(500).json({ msg: err.message });
+  }
+});
+
 router.route("/:username").get(middleware.checkToken, async (req, res) => {
   try {
     const result = await User.findOne({ username: req.params.username });
