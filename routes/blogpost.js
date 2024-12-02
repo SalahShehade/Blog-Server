@@ -6,6 +6,27 @@ const multer = require("multer");
 const AddBlogApproval = require("../models/AddBlogApproval.model"); // Adjust the path as needed
 const path = require("path");
 
+const storage = multer.diskStorage({
+  // The path to store the image and file name
+  destination: (req, file, cb) => {
+    cb(null, "./uploads"); // `uploads` is the folder that stores the images
+  },
+  filename: (req, file, cb) => {
+    // Use a unique filename by appending a timestamp
+    const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
+      file.originalname
+    )}`;
+    cb(null, uniqueName);
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 6, // 6 MB
+  },
+});
+
 // //first add code
 router.route("/Add").post(middleware.checkToken, async (req, res) => {
   const blogpost = BlogPost({
@@ -25,6 +46,66 @@ router.route("/Add").post(middleware.checkToken, async (req, res) => {
       console.log(error);
       res.json({ error: error });
     });
+});
+
+router.route("/update/:id").patch(middleware.checkToken, async (req, res) => {
+  try {
+    const blogpost = await BlogPost.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+
+    if (!blogpost) {
+      return res.status(404).json({ error: "Blog not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Blog updated successfully", data: blogpost });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch(
+  "/update/previewImage/:id",
+  upload.single("img"),
+  async (req, res) => {
+    try {
+      const blogPost = await BlogPost.findById(req.params.id);
+      if (!blogPost) {
+        return res.status(404).json({ error: "Blog not found" });
+      }
+
+      blogPost.previewImage = req.file.path;
+      await blogPost.save();
+
+      res.status(200).json({ message: "Preview image updated successfully" });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
+router.delete("/remove/coverImage/:id", async (req, res) => {
+  try {
+    const blogPost = await BlogPost.findById(req.params.id);
+    if (!blogPost) {
+      return res.status(404).json({ error: "Blog not found" });
+    }
+
+    const { imageUrl } = req.body; // Ensure the request body contains imageUrl
+    if (!imageUrl) {
+      return res.status(400).json({ error: "Image URL is required" });
+    }
+
+    blogPost.coverImages = blogPost.coverImages.filter(
+      (img) => img !== imageUrl
+    );
+    await blogPost.save();
+    res.status(200).json({ message: "Cover image removed successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // router.route("/Add").post(middleware.checkToken, async (req, res) => {
@@ -102,26 +183,6 @@ router.route("/Add").post(middleware.checkToken, async (req, res) => {
 //       res.status(500).send(err);
 //     }
 //   }); //we use multer for uploading profile image
-const storage = multer.diskStorage({
-  // The path to store the image and file name
-  destination: (req, file, cb) => {
-    cb(null, "./uploads"); // `uploads` is the folder that stores the images
-  },
-  filename: (req, file, cb) => {
-    // Use a unique filename by appending a timestamp
-    const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
-      file.originalname
-    )}`;
-    cb(null, uniqueName);
-  },
-});
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 1024 * 1024 * 6, // 6 MB
-  },
-});
 
 // router
 //   .route("/add/coverImages/:id")
