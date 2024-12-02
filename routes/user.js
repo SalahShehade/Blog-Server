@@ -217,27 +217,57 @@ router.route("/register").post(async (req, res) => {
 });
 
 router.route("/update/:email").patch(async (req, res) => {
-  //forgot password part...................................
   try {
+    // Find the user by email and update both the password and verified fields
     const result = await User.findOneAndUpdate(
       { email: req.params.email },
-      { $set: { password: req.body.password } },
-      { new: true } // this option returns the updated document
+      {
+        $set: {
+          password: req.body.password,
+          verified: false, // Reset verified to false
+        },
+      },
+      { new: true } // Return the updated document
     );
 
     if (!result) {
       return res.status(404).json({ msg: "User not found" });
     }
 
+    // Respond with a success message
     const msg = {
-      msg: "Password successfully updated!",
+      msg: "Password successfully updated, verification reset!",
       email: req.params.email,
     };
     return res.json(msg);
   } catch (err) {
+    // Handle any errors
     return res.status(500).json({ msg: err.message });
   }
 });
+
+// router.route("/update/:email").patch(async (req, res) => {
+//   //forgot password part...................................
+//   try {
+//     const result = await User.findOneAndUpdate(
+//       { email: req.params.email },
+//       { $set: { password: req.body.password } },
+//       { new: true } // this option returns the updated document
+//     );
+
+//     if (!result) {
+//       return res.status(404).json({ msg: "User not found" });
+//     }
+
+//     const msg = {
+//       msg: "Password successfully updated!",
+//       email: req.params.email,
+//     };
+//     return res.json(msg);
+//   } catch (err) {
+//     return res.status(500).json({ msg: err.message });
+//   }
+// });
 
 router
   .route("/delete/:username")
