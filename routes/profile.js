@@ -13,7 +13,7 @@ const storage = multer.diskStorage({
     cb(null, "./uploads"); //uploads is the folder that stores the img
   },
   filename: (req, file, cb) => {
-    cb(null, req.decoded.username + ".jpg"); //use username to make it unique
+    cb(null, req.decoded.email + ".jpg"); //use email to make it unique
   },
 });
 
@@ -41,7 +41,7 @@ router
 
     try {
       const profile = await Profile.findOneAndUpdate(
-        { username: req.decoded.username },
+        { email: req.decoded.email },
         { $set: { img: req.file.path } },
         { new: true }
       );
@@ -61,8 +61,9 @@ router
 
 router.route("/add").post(middleware.checkToken, (req, res) => {
   console.log(req.body); // Check if req.body contains the expected data
+  console.log("Decoded email:", req.decoded.email);
   const profile = Profile({
-    username: req.decoded.username,
+    email: req.decoded.email,
     name: req.body.name,
     profession: req.body.profession,
     DOB: req.body.DOB,
@@ -71,19 +72,18 @@ router.route("/add").post(middleware.checkToken, (req, res) => {
   });
 
   profile
-    .save() //store to database
-    .then(() => {
-      return res.json({ msg: "Profile sucessfully stored..." });
-    })
+    .save()
+    .then(() => res.json({ msg: "Profile successfully stored..." }))
     .catch((err) => {
-      return res.status(400).json({ err: err });
+      console.error("Database save error:", err.message);
+      return res.status(400).json({ error: err.message });
     });
 });
 
 router.route("/checkProfile").get(middleware.checkToken, async (req, res) => {
   // to check wether the usrname exists or not
   try {
-    const result = await Profile.findOne({ username: req.decoded.username }); //since username is provided as unique
+    const result = await Profile.findOne({ email: req.decoded.email }); //since email is provided as unique
 
     if (!result) {
       return res.status(404).json({ msg: "Profile not found" });
@@ -91,12 +91,12 @@ router.route("/checkProfile").get(middleware.checkToken, async (req, res) => {
     if (result != null) {
       return res.json({
         Status: true,
-        username: req.decoded.username, // this part is added newly for drawer username and profile picture
+        email: req.decoded.email, // this part is added newly for drawer username and profile picture
       });
     } else {
       return res.json({
         Status: false,
-        username: req.decoded.username,
+        email: req.decoded.email,
       });
     }
   } catch (err) {
@@ -106,7 +106,7 @@ router.route("/checkProfile").get(middleware.checkToken, async (req, res) => {
 
 router.route("/getData").get(middleware.checkToken, async (req, res) => {
   const result = await Profile.findOne({
-    username: req.decoded.username,
+    email: req.decoded.email,
   });
   if (!result) return res.json("Data not found");
   if (result != null) {
@@ -121,7 +121,7 @@ router.route("/getData").get(middleware.checkToken, async (req, res) => {
 router.route("/update").patch(middleware.checkToken, async (req, res) => {
   let profile = {};
   const result = await Profile.findOne({
-    username: req.decoded.username,
+    email: req.decoded.email,
   });
   if (!result) profile = {};
   if (result == null) {
@@ -129,7 +129,7 @@ router.route("/update").patch(middleware.checkToken, async (req, res) => {
   }
   const updateResult = await Profile.findOneAndUpdate(
     {
-      username: req.decoded.username,
+      email: req.decoded.email,
     },
     {
       $set: {

@@ -3,9 +3,11 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const BlogPost = Schema({
-  username: String, // username is unique for each user(blog addition) user can see his blog on profile too
+  username: String,
   title: String,
   body: String,
+  email: String, // email is unique for each user(blog addition) user can see his blog on profile too
+
   likedBy: {
     type: [String], // This array stores the usernames of users who liked the post
     default: [],

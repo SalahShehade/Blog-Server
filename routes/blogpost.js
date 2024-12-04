@@ -30,7 +30,7 @@ const upload = multer({
 // //first add code
 router.route("/Add").post(middleware.checkToken, async (req, res) => {
   const blogpost = BlogPost({
-    username: req.decoded.username,
+    email: req.decoded.email,
     title: req.body.title,
     body: req.body.body,
     type: req.body.type,
@@ -256,7 +256,7 @@ router
 
 router.route("/getOwnBlog").get(middleware.checkToken, async (req, res) => {
   const response = await BlogPost.find({
-    username: req.decoded.username,
+    email: req.decoded.email,
   }); //find all blog data that belongs to the user
 
   if (!response) {
@@ -267,7 +267,7 @@ router.route("/getOwnBlog").get(middleware.checkToken, async (req, res) => {
 
 router.route("/getOtherBlog").get(middleware.checkToken, async (req, res) => {
   const response = await BlogPost.find({
-    username: { $ne: req.decoded.username }, //if the username not equal (ne) to the token username then fetch the data
+    email: { $ne: req.decoded.email }, //if the username not equal (ne) to the token username then fetch the data
   }); //find all blog data that belongs to the other users
 
   if (!response) {
@@ -345,7 +345,7 @@ router
 
 router.route("/delete/:id").delete(middleware.checkToken, async (req, res) => {
   try {
-    const { role, username } = req.decoded; // Extract role and username from token
+    const { role, email } = req.decoded; // Extract role and username from token
 
     let query;
 
@@ -354,7 +354,7 @@ router.route("/delete/:id").delete(middleware.checkToken, async (req, res) => {
       query = { _id: req.params.id };
     } else {
       // Non-admins can only delete their own blogs
-      query = { _id: req.params.id, username: username };
+      query = { _id: req.params.id, email: email };
     }
 
     const response = await BlogPost.findOneAndDelete(query);
@@ -432,7 +432,7 @@ router
 
       res.status(200).json({
         blogTitle: blogPost.title,
-        authorName: blogPost.username, // Return the username directly
+        authorName: blogPost.email, // Return the username directly
       });
     } catch (error) {
       console.error("Error fetching blog details:", error);
@@ -632,7 +632,7 @@ router.post("/approve/:id", async (req, res) => {
       const approvedBlog = new BlogPost({
         title: blog.title,
         body: blog.body,
-        username: blog.username,
+        email: blog.email,
         status: "published",
         createdAt: blog.createdAt,
       });

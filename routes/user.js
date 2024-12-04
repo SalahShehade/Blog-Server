@@ -64,6 +64,22 @@ router.route("/isVerified/:email").get(async (req, res) => {
   }
 });
 
+router.route("/:email").get(middleware.checkToken, async (req, res) => {
+  try {
+    const result = await User.findOne({ email: req.params.email });
+
+    if (!result) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+    res.json({
+      data: result,
+      email: req.params.email,
+    });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
 router.route("/:username").get(middleware.checkToken, async (req, res) => {
   try {
     const result = await User.findOne({ username: req.params.username });
@@ -75,6 +91,28 @@ router.route("/:username").get(middleware.checkToken, async (req, res) => {
       data: result,
       username: req.params.username,
     });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+router.route("/checkemail/:email").get(async (req, res) => {
+  // to check wether the username exists or not
+  try {
+    const result = await User.findOne({ email: req.params.email });
+
+    if (!result) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+    if (result != null) {
+      return res.json({
+        Status: true,
+      });
+    } else {
+      return res.json({
+        Status: false,
+      });
+    }
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
@@ -147,17 +185,17 @@ router.route("/checkusername/:username").get(async (req, res) => {
 
 router.route("/login").post(async (req, res) => {
   try {
-    const result = await User.findOne({ username: req.body.username });
+    const result = await User.findOne({ email: req.body.email });
 
     if (result == null) {
-      return res.status(403).json({ msg: "Username is incorrect" });
+      return res.status(403).json({ msg: "Email is incorrect" });
     }
 
     if (result.password === req.body.password) {
       // Include the role in the JWT payload
       const token = jwt.sign(
         {
-          username: result.username,
+          email: result.email,
           role: result.role, // Include the user's role
         },
         config.key,
@@ -270,17 +308,17 @@ router.route("/update/:email").patch(async (req, res) => {
 // });
 
 router
-  .route("/delete/:username")
+  .route("/delete/:email")
   .delete(middleware.checkToken, async (req, res) => {
     const result = await User.findOneAndDelete({
-      username: req.params.username,
+      email: req.params.email,
     });
     if (!result) {
       return res.status(404).json({ msg: "User not found" });
     }
     const msg = {
       msg: "User has been successfully deleted",
-      username: req.params.username,
+      email: req.params.email,
     };
     return res.json(msg);
   });
@@ -297,7 +335,7 @@ router.route("/register").post(checkAdmin, async (req, res) => {
   // Registration logic
 });
 
-router.route("/updateRole/:username").patch(async (req, res) => {
+router.route("/updateRole/:email").patch(async (req, res) => {
   try {
     const { role } = req.body;
 
@@ -309,7 +347,7 @@ router.route("/updateRole/:username").patch(async (req, res) => {
 
     // Update the user's role
     const result = await User.findOneAndUpdate(
-      { username: req.params.username },
+      { email: req.params.email },
       { $set: { role: role } },
       { new: true } // Return the updated document
     );
@@ -320,7 +358,7 @@ router.route("/updateRole/:username").patch(async (req, res) => {
 
     return res.json({
       msg: "Role updated successfully",
-      username: req.params.username,
+      email: req.params.email,
       role: result.role,
     });
   } catch (err) {

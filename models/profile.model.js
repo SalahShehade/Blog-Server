@@ -4,11 +4,16 @@ const Schema = mongoose.Schema;
 
 const Profile = Schema(
   {
-    username: {
+    email: {
       type: String,
       required: true,
       unique: true,
     },
+
+    username: {
+      type: String,
+    },
+
     name: String,
     profession: String,
     DOB: String,

@@ -6,7 +6,6 @@ const User = Schema({
   username: {
     type: String,
     required: true,
-    unique: true,
   },
 
   password: {
@@ -16,6 +15,7 @@ const User = Schema({
   email: {
     type: String,
     required: true,
+    unique: true,
   },
 
   role: {

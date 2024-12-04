@@ -6,9 +6,9 @@ const router = express.Router();
 // Add a new blog for approval with check for duplicates
 router.post("/addApproval", async (req, res) => {
   try {
-    const { title, body, username, type } = req.body;
+    const { title, body, email, type } = req.body;
 
-    if (!title || !body || !username || !type) {
+    if (!title || !body || !email || !type) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
@@ -16,20 +16,19 @@ router.post("/addApproval", async (req, res) => {
     const existingBlog = await AddBlogApproval.findOne({
       title,
       body,
-      username,
+      email,
       type,
     });
     if (existingBlog) {
       return res
         .status(409) // Conflict status code
         .json({
-          error:
-            "A blog with the same title, body, and username already exists.",
+          error: "A blog with the same title, body, and email already exists.",
         });
     }
 
     // Create a new blog entry
-    const newBlog = new AddBlogApproval({ title, body, username, type });
+    const newBlog = new AddBlogApproval({ title, body, email, type });
     const savedBlog = await newBlog.save();
 
     res
