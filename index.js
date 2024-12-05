@@ -5,6 +5,10 @@ const path = require("path");
 const PORT = process.env.PORT || 5000;
 const app = express();
 const cors = require("cors");
+
+const events = require("events");
+events.EventEmitter.defaultMaxListeners = 15; // Increase the limit to 15 or more as needed
+
 //app.use(cors({ origin: "http://localhost:57308" })); // Replace with your web app's URL
 app.use(cors({ origin: "*" })); // Allow requests from any origin
 
@@ -24,6 +28,9 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.json()); // to help nodeJs understand json data
 const userRoute = require("./routes/user.js");
 app.use("/user", userRoute);
+
+const notificationsRoute = require("./routes/notifications.js");
+app.use("/notifications", notificationsRoute);
 
 const profileRoute = require("./routes/profile.js");
 app.use("/profile", profileRoute);
