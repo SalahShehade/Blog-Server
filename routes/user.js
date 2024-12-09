@@ -367,15 +367,22 @@ router.route("/updateRole/:email").patch(async (req, res) => {
 });
 //update the Role of user
 
-router.route("/allUsers").get(async (req, res) => {
+router.route("/all").get(async (req, res) => {
   try {
-    // Return all users, but only send the required fields
-    const users = await User.find({}, "username email role"); // Only return username, email, and role
+    console.log("Incoming request to /all");
+
+    // Find all users and select only 'username', 'email', and 'role'
+    const users = await User.find({}, "username email role");
+
     if (!users || users.length === 0) {
       return res.status(404).json({ msg: "No users found" });
     }
+
+    console.log("Users retrieved successfully:", users);
+
     res.status(200).json(users);
   } catch (err) {
+    console.error("Error in /all endpoint:", err.message);
     res.status(500).json({ msg: err.message });
   }
 });
