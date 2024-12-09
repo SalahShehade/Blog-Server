@@ -367,17 +367,16 @@ router.route("/updateRole/:email").patch(async (req, res) => {
 });
 //update the Role of user
 
-router.route("/all-users").get(middleware.checkToken, async (req, res) => {
+router.route("/allUsers").get(async (req, res) => {
   try {
-    const users = await User.find({}, { username: 1, email: 1, role: 1 });
+    // Return all users, but only send the required fields
+    const users = await User.find({}, "username email role"); // Only return username, email, and role
     if (!users || users.length === 0) {
-      return res.status(404).json({ status: false, msg: "No users found" });
+      return res.status(404).json({ msg: "No users found" });
     }
-
-    res.status(200).json({ status: true, users });
+    res.status(200).json(users);
   } catch (err) {
-    console.error("Error fetching users:", err.message);
-    res.status(500).json({ status: false, msg: "Error fetching users" });
+    res.status(500).json({ msg: err.message });
   }
 });
 
