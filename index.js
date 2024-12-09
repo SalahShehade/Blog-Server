@@ -2,22 +2,19 @@ const express = require("express");
 const mongoose = require("mongoose");
 const path = require("path");
 
-
-
 //hello world
 const PORT = process.env.PORT || 5000;
-const port1 = process.env.PORT || 5001;//
+const port1 = process.env.PORT || 5001; //
 const app = express();
-const cors = require("cors");//
+const cors = require("cors"); //
 //new
-var http = require("http");//
+var http = require("http"); //
 var server = http.createServer(app);
 var io = require("socket.io")(server, {
-  cors:
-  {
-    origin:"*"
-  }
-});//
+  cors: {
+    origin: "*",
+  },
+}); //
 
 const events = require("events");
 events.EventEmitter.defaultMaxListeners = 15; // Increase the limit to 15 or more as needed
@@ -25,18 +22,18 @@ events.EventEmitter.defaultMaxListeners = 15; // Increase the limit to 15 or mor
 //app.use(cors({ origin: "http://localhost:57308" })); // Replace with your web app's URL
 app.use(cors({ origin: "*" })); // Allow requests from any origin
 
-io.on("connection", (socket)=> {
+io.on("connection", (socket) => {
   console.log("connected");
-  console.log(socket.id,"has joined");
-  socket.on("/test",(msg)=>{
+  console.log(socket.id, "has joined");
+  socket.on("/test", (msg) => {
     console.log(msg);
-  })
-});//
+  });
+}); //
 
-server.listen(port1,"0.0.0.0",()=>{
+server.listen(port1, "0.0.0.0", () => {
   console.log("server connected");
-  console.log("")
-});//
+  console.log("");
+}); //
 
 mongoose.connect(
   "mongodb+srv://Abdallah:12345@cluster0.njict.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0/myapp"
