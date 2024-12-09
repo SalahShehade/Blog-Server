@@ -6,6 +6,32 @@ const middleware = require("../middleware");
 
 const router = express.Router();
 
+router.route("/getUsers").get(middleware.checkToken, async (req, res) => {
+  try {
+    const { role } = req.decoded; // Assuming the role is stored in the decoded JWT
+
+    if (role === "admin") {
+      // Fetch only users and customers
+      const response = await User.find(
+        { role: { $in: ["user", "customer"] } }, // Include only users with roles 'user' or 'customer'
+        "email username role" // Include only these fields
+      );
+
+      console.log("Filtered Users:", response); // Log filtered response
+
+      if (!response || response.length === 0) {
+        return res.status(404).json({ message: "No users or customers found" });
+      }
+
+      return res.json({ data: response });
+    } else {
+      return res.status(403).json({ message: "Access denied. Admins only." });
+    }
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+});
+
 // Add a field to track if the user is verified
 router.route("/verify/:email").get(async (req, res) => {
   try {
@@ -366,25 +392,5 @@ router.route("/updateRole/:email").patch(async (req, res) => {
   }
 });
 //update the Role of user
-
-router.route("/all").get(async (req, res) => {
-  try {
-    console.log("Incoming request to /all");
-
-    // Find all users and select only 'username', 'email', and 'role'
-    const users = await User.find({}, "username email role");
-
-    if (!users || users.length === 0) {
-      return res.status(404).json({ msg: "No users found" });
-    }
-
-    console.log("Users retrieved successfully:", users);
-
-    res.status(200).json(users);
-  } catch (err) {
-    console.error("Error in /all endpoint:", err.message);
-    res.status(500).json({ msg: err.message });
-  }
-});
 
 module.exports = router;
