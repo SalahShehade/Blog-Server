@@ -18,9 +18,9 @@ const initSocketServer = (server) => {
     });
 
     socket.on('send_message', async (data) => {
-      const { chatId, senderId, content } = data;
+      const { chatId, senderEmail, content } = data;
 
-      const message = new Message({ chatId, sender: senderId, content });
+      const message = new Message({ chatId, sender: senderEmail, content });
       await message.save();
 
       await Chat.findByIdAndUpdate(chatId, {

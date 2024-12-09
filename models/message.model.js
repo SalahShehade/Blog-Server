@@ -9,10 +9,10 @@ const MessageSchema = new Schema({
     required: true,
   },
   sender: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String, // Use email instead of ObjectId
     required: true,
   },
+  
   content: {
     type: String,
     required: true,

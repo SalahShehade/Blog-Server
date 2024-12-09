@@ -5,34 +5,43 @@ const middleware = require("../middleware");
 
 const router = express.Router();
 
-// Get all chats for a user
+/**
+ * 🟢 Get all chats for a user
+ * This route returns all chats where the current user's email is in the `users` array.
+ */
 router.get("/user-chats", middleware.checkToken, async (req, res) => {
   try {
-    const userId = req.decoded.id; // User ID from JWT token
-    const chats = await Chat.find({ users: userId })
-      .populate('shopOwner', 'username email')
-      .populate('messages');
+    const userEmail = req.decoded.email; // Extract user email from the token
+
+    // Find all chats where the current user's email is in the `users` array
+    const chats = await Chat.find({ users: userEmail });
+
     res.status(200).json(chats);
   } catch (error) {
     res.status(500).json({ msg: error.message });
   }
 });
 
-// Create a chat between user and shop
+/**
+ * 🟢 Create a chat between a user and a shop
+ * This route creates a new chat between the current user and a shop owner.
+ */
 router.post("/create", middleware.checkToken, async (req, res) => {
   try {
-    const { shopOwnerId } = req.body;
-    const userId = req.decoded.id;
+    const { shopOwnerEmail } = req.body; // Use shopOwnerEmail from request body
+    const userEmail = req.decoded.email; // Extract user's email from the token
 
-    const existingChat = await Chat.findOne({ users: { $all: [userId, shopOwnerId] } });
+    // Check if the chat already exists
+    const existingChat = await Chat.findOne({ users: { $all: [userEmail, shopOwnerEmail] } });
 
     if (existingChat) {
       return res.status(200).json(existingChat);
     }
 
+    // Create a new chat document
     const newChat = new Chat({
-      users: [userId, shopOwnerId],
-      shopOwner: shopOwnerId,
+      users: [userEmail, shopOwnerEmail], // Store emails instead of user IDs
+      shopOwner: shopOwnerEmail, // Store the shop owner's email
     });
 
     await newChat.save();
@@ -42,27 +51,53 @@ router.post("/create", middleware.checkToken, async (req, res) => {
   }
 });
 
-// Send a message
+/**
+ * 🟢 Send a message in a chat
+ * This route allows the current user to send a message in a specific chat.
+ */
 router.post("/send-message", middleware.checkToken, async (req, res) => {
   try {
     const { chatId, content } = req.body;
-    const senderId = req.decoded.id;
+    const senderEmail = req.decoded.email; // Extract sender's email from the token
 
+    // Create a new message document
     const message = new Message({
-      chatId,
-      sender: senderId,
-      content,
+      chatId, // The chat where the message was sent
+      sender: senderEmail, // Store sender's email instead of userId
+      content, // The actual message content
     });
 
     await message.save();
 
+    // Update the chat with the new message
     await Chat.findByIdAndUpdate(chatId, {
-      $push: { messages: message._id },
-      lastMessage: content,
-      lastMessageTime: Date.now(),
+      $push: { messages: message._id }, // Add the message to the chat
+      lastMessage: content, // Update the last message content
+      lastMessageTime: Date.now(), // Update the last message time
     });
 
     res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ msg: error.message });
+  }
+});
+
+/**
+ * 🟢 Get all messages for a specific chat
+ * This route returns all messages for a specific chat.
+ */
+router.get("/messages/:chatId", middleware.checkToken, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+
+    // Find the chat and return all its messages
+    const chat = await Chat.findById(chatId).populate('messages');
+    
+    if (!chat) {
+      return res.status(404).json({ msg: 'Chat not found' });
+    }
+
+    res.status(200).json(chat.messages);
   } catch (error) {
     res.status(500).json({ msg: error.message });
   }
