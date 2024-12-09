@@ -81,3 +81,63 @@ app
 app.listen(PORT, "0.0.0.0", () =>
   console.log("Welcome your listening at port: " + PORT)
 );
+
+// 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+
+const chatRoutes = require('./routes/chat'); // ✅ New line for chat routes import
+const { Server } = require('socket.io'); // ✅ New line for Socket.IO Server import
+const Chat = require('./models/chat.model'); // ✅ Import Chat model
+const Message = require('./models/message.model'); // ✅ Import Message model
+
+// 2️⃣ **Add Chat Routes**
+app.use('/chat', chatRoutes); // ✅ Register the chat routes
+
+// 3️⃣ **Socket.IO Setup for Real-Time Chat**
+const initSocketServer = (server) => {
+  const io = new Server(server, {
+    cors: {
+      origin: '*',
+    },
+  });
+
+  io.on('connection', (socket) => {
+    console.log('A user connected', socket.id);
+
+    // Listen for when a user joins a specific chat
+    socket.on('join_chat', (chatId) => {
+      socket.join(chatId);
+      console.log(`User joined chat: ${chatId}`);
+    });
+
+    // Listen for messages from users
+    socket.on('send_message', async (data) => {
+      const { chatId, senderId, content } = data;
+
+      try {
+        // Save the message in the database
+        const message = new Message({ chatId, sender: senderId, content });
+        await message.save();
+
+        // Update the last message in the chat document
+        await Chat.findByIdAndUpdate(chatId, {
+          $push: { messages: message._id },
+          lastMessage: content,
+          lastMessageTime: Date.now(),
+        });
+
+        // Emit the message to everyone in the chat
+        io.to(chatId).emit('receive_message', message);
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
+    });
+
+    // Handle user disconnection
+    socket.on('disconnect', () => {
+      console.log('User disconnected');
+    });
+  });
+};
+
+initSocketServer(server); // ✅ Call the initSocketServer function to start Socket.IO
+
