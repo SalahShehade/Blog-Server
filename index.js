@@ -3,9 +3,17 @@ const mongoose = require("mongoose");
 const path = require("path");
 
 //hello world
-const PORT = process.env.PORT || 5000;
-const port1 = process.env.PORT || 5001; //
+//const PORT = process.env.port || 5000;
 const app = express();
+const PORT = app.listen(process.env.PORT || 5000, function () {
+  console.log(
+    "Express server listening on port %d in %s mode",
+    this.address().port,
+    app.settings.env
+  );
+});
+const port1 = process.env.port || 5001; //
+
 const cors = require("cors"); //
 //new
 var http = require("http"); //
