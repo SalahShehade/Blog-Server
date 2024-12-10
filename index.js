@@ -5,12 +5,7 @@ const cors = require("cors");
 var http = require("http");
 const { Server } = require("socket.io"); // ✅ New line for Socket.IO Server import
 
-app.use((req, res, next) => {
-  if (req.headers["x-forwarded-proto"] !== "https") {
-    return res.redirect(`https://${req.hostname}${req.url}`);
-  }
-  next();
-});
+
 
 //hello world
 //const PORT = process.env.port || 5000;
@@ -26,6 +21,14 @@ const app = express();
 ; //
 //new
  //
+
+ app.use((req, res, next) => {
+  if (req.headers["x-forwarded-proto"] !== "https") {
+    return res.redirect(`https://${req.hostname}${req.url}`);
+  }
+  next();
+});
+
 var server = http.createServer(app);
 server.listen(process.env.PORT || 5000, () => {
   console.log("✅ Server is running on port", process.env.PORT || 5000);
