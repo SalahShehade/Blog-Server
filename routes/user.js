@@ -209,6 +209,37 @@ router.route("/checkusername/:username").get(async (req, res) => {
 //     });
 // });
 
+router.route("/ban/:email").patch(async (req, res) => {
+  const email = req.params.email;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Toggle the ban status
+    user.isBanned = !user.isBanned;
+
+    await user.save();
+
+    res.status(200).json({
+      Status: true,
+      message: `User has been ${
+        user.isBanned ? "banned" : "unbanned"
+      } successfully.`,
+      isBanned: user.isBanned,
+    });
+  } catch (error) {
+    res.status(500).json({
+      Status: false,
+      message: "Failed to update user status.",
+      error,
+    });
+  }
+});
+
 router.route("/login").post(async (req, res) => {
   try {
     const result = await User.findOne({ email: req.body.email });
