@@ -366,18 +366,6 @@ router.route("/delete/:id").delete(middleware.checkToken, async (req, res) => {
       });
     }
 
-    // Send notification if the blog is deleted by an admin
-    if (role === "admin") {
-      // Create a notification for the blog owner
-      const notification = new Notification({
-        title: "Blog Deleted",
-        body: `Your blog with title "${response.title}" has been deleted by an admin.`,
-        recipient: response.email, // Email of the blog owner
-      });
-
-      await notification.save();
-    }
-
     return res.json({ Status: true, message: "Blog deleted successfully" });
   } catch (error) {
     console.error("Error deleting blog:", error);
