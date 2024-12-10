@@ -45,7 +45,7 @@ router.route("/getUsers").get(middleware.checkToken, async (req, res) => {
       // Fetch only users and customers
       const response = await User.find(
         { role: { $in: ["user", "customer"] } }, // Include only users with roles 'user' or 'customer'
-        "email username role" // Include only these fields
+        "email username role isBanned" // Include only these fields
       );
 
       console.log("Filtered Users:", response); // Log filtered response
