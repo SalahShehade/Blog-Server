@@ -84,33 +84,33 @@ app.listen(PORT, "0.0.0.0", () =>
 
 // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
-const chatRoutes = require('./routes/chat'); // ✅ New line for chat routes import
-const { Server } = require('socket.io'); // ✅ New line for Socket.IO Server import
-const Chat = require('./models/chat.model'); // ✅ Import Chat model
-const Message = require('./models/message.model'); // ✅ Import Message model
+const chatRoutes = require("./routes/chat"); // ✅ New line for chat routes import
+const { Server } = require("socket.io"); // ✅ New line for Socket.IO Server import
+const Chat = require("./models/chat.model"); // ✅ Import Chat model
+const Message = require("./models/message.model"); // ✅ Import Message model
 
 // 2️⃣ **Add Chat Routes**
-app.use('/chat', chatRoutes); // ✅ Register the chat routes
+app.use("/chat", chatRoutes); // ✅ Register the chat routes
 
 // 3️⃣ **Socket.IO Setup for Real-Time Chat**
 const initSocketServer = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: '*',
+      origin: "*",
     },
   });
 
-  io.on('connection', (socket) => {
-    console.log('A user connected', socket.id);
+  io.on("connection", (socket) => {
+    console.log("A user connected", socket.id);
 
     // Listen for when a user joins a specific chat
-    socket.on('join_chat', (chatId) => {
+    socket.on("join_chat", (chatId) => {
       socket.join(chatId);
       console.log(`User joined chat: ${chatId}`);
     });
 
     // Listen for messages from users
-    socket.on('send_message', async (data) => {
+    socket.on("send_message", async (data) => {
       const { chatId, senderId, content } = data;
 
       try {
@@ -126,18 +126,17 @@ const initSocketServer = (server) => {
         });
 
         // Emit the message to everyone in the chat
-        io.to(chatId).emit('receive_message', message);
+        io.to(chatId).emit("receive_message", message);
       } catch (error) {
-        console.error('Error sending message:', error);
+        console.error("Error sending message:", error);
       }
     });
 
     // Handle user disconnection
-    socket.on('disconnect', () => {
-      console.log('User disconnected');
+    socket.on("disconnect", () => {
+      console.log("User disconnected");
     });
   });
 };
 
 initSocketServer(server); // ✅ Call the initSocketServer function to start Socket.IO
-

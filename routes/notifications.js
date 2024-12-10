@@ -2,6 +2,7 @@ const express = require("express");
 const admin = require("firebase-admin");
 const router = express.Router();
 
+const Notification = require("../models/notifications.model");
 // Function to fetch admin tokens from your database (replace this with your actual logic)
 async function getAdminTokens() {
   // Example: Fetch tokens from your database
@@ -157,4 +158,103 @@ router.post("/notifyAdmins/updateShop/:email/:id", async (req, res) => {
     });
   }
 });
+
+router.route("/send").post(async (req, res) => {
+  const { title, body, recipient, type } = req.body;
+
+  try {
+    // Create and save the notification
+    const notification = new Notification({
+      title,
+      body,
+      recipient, // Using email instead of userId
+      type,
+    });
+
+    await notification.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Notification created successfully.",
+      data: notification,
+    });
+  } catch (error) {
+    console.error("Error creating notification:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to create notification.",
+      error,
+    });
+  }
+});
+
+// Route: Get all notifications for a user by email
+// Route: Get all notifications for a user by email
+router.route("/user/:email").get(async (req, res) => {
+  const email = req.params.email; // Extract email from the route parameter
+
+  try {
+    const notifications = await Notification.find({ recipient: email }).sort({
+      createdAt: -1,
+    });
+    res.status(200).json({ data: notifications });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch notifications.",
+      error,
+    });
+  }
+});
+
+// Route: Get unread notification count for a user by email
+// Route: Get unread notification count for a user by email
+router.route("/unreadCount/:email").get(async (req, res) => {
+  const email = req.params.email; // Extract email from the route parameter
+
+  try {
+    const unreadCount = await Notification.countDocuments({
+      recipient: email, // Use email instead of userId
+      isRead: false,
+    });
+    res.status(200).json({ count: unreadCount });
+  } catch (error) {
+    console.error("Error fetching unread count:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch unread count.",
+      error,
+    });
+  }
+});
+
+// Route: Mark a notification as read
+router.route("/markAsRead/:notificationId").patch(async (req, res) => {
+  const notificationId = req.params.notificationId;
+
+  try {
+    const notification = await Notification.findById(notificationId);
+    if (!notification) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Notification not found." });
+    }
+
+    notification.isRead = true;
+    await notification.save();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Notification marked as read." });
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update notification.",
+      error,
+    });
+  }
+});
+
 module.exports = router;
