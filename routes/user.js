@@ -229,7 +229,7 @@ router.route("/ban/:email").patch(async (req, res) => {
       message: `User has been ${
         user.isBanned ? "banned" : "unbanned"
       } successfully.`,
-      isBanned: user.isBanned,
+      isBanned: user.isBanned, // Send the updated status back to the client
     });
   } catch (error) {
     res.status(500).json({
