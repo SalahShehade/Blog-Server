@@ -257,4 +257,31 @@ router.route("/markAsRead/:notificationId").patch(async (req, res) => {
   }
 });
 
+// Route: Delete a notification by ID
+router.route("/delete/:id").delete(async (req, res) => {
+  const notificationId = req.params.id;
+
+  try {
+    const response = await Notification.findByIdAndDelete(notificationId);
+    if (!response) {
+      return res.status(404).json({
+        Status: false,
+        message: "Notification not found.",
+      });
+    }
+
+    res.status(200).json({
+      Status: true,
+      message: "Notification deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Error deleting notification:", error);
+    res.status(500).json({
+      Status: false,
+      message: "Failed to delete notification.",
+      error,
+    });
+  }
+});
+
 module.exports = router;
