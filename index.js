@@ -5,40 +5,41 @@ const cors = require("cors");
 var http = require("http");
 const { Server } = require("socket.io"); // ✅ New line for Socket.IO Server import
 
+app.use((req, res, next) => {
+  if (req.headers["x-forwarded-proto"] !== "https") {
+    return res.redirect(`https://${req.hostname}${req.url}`);
+  }
+  next();
+});
+
 //hello world
 //const PORT = process.env.port || 5000;
 const app = express();
-const PORT = app.listen(process.env.PORT || 5000, function () {
-  console.log(
-    "Express server listening on port %d in %s mode",
-    this.address().port,
-    app.settings.env
-  );
-});
+// const PORT = app.listen(process.env.PORT || 5000, function () { ✅ comment for not needed 
+//   console.log(
+//     "Express server listening on port %d in %s mode",
+//     this.address().port,
+//     app.settings.env
+//   );
+// });
 
 ; //
 //new
  //
 var server = http.createServer(app);
-var io = require("socket.io")(server, {
-  cors: {
-    origin: "*",
-  },
-}); //
+server.listen(process.env.PORT || 5000, () => {
+  console.log("✅ Server is running on port", process.env.PORT || 5000);
+});
+
+ //
 
 const events = require("events");
 events.EventEmitter.defaultMaxListeners = 15; // Increase the limit to 15 or more as needed
 
 //app.use(cors({ origin: "http://localhost:57308" })); // Replace with your web app's URL
-app.use(cors({ origin: "*" })); // Allow requests from any origin
+//app.use(cors({ origin: "*" })); // Allow requests from any origin
 
-io.on("connection", (socket) => {
-  console.log("connected");
-  console.log(socket.id, "has joined");
-  socket.on("/test", (msg) => {
-    console.log(msg);
-  });
-}); //
+
 
 
 
@@ -77,11 +78,12 @@ app
     res.json("Welcome to my Hajzi app. Have fun with Booking freely!!")
   );
 
-app.listen(PORT, "0.0.0.0", () =>
-  console.log("Welcome your listening at port: " + PORT)
-);
+// app.listen(PORT, "0.0.0.0", () =>
+//   console.log("Welcome your listening at port: " + PORT) 🔥 comment for not needed 
+// );
 
 // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+
 
 const chatRoutes = require("./routes/chat"); // ✅ New line for chat routes import
 const Chat = require("./models/chat.model"); // ✅ Import Chat model
@@ -94,12 +96,16 @@ app.use("/chat", chatRoutes); // ✅ Register the chat routes
 const initSocketServer = (server) => {
   // ✅ Attach Socket.IO to the existing server
   const io = new Server(server, {
-    path: '/socket.io', // 🔥 Set path for Socket.IO to avoid Heroku issues
+    path: "/socket.io", // 🔥 Remove the trailing slash
     cors: {
-      origin: '*', // 🔥 Allow all origins
-      methods: ['GET', 'POST'],
+      origin: "*", 
+      methods: ["GET", "POST"],
+      credentials: true
     },
   });
+  
+  
+  
 
   // ✅ Handle Socket.IO Connection
   io.on("connection", (socket) => {
@@ -150,4 +156,4 @@ const initSocketServer = (server) => {
   });
 };
 
-module.exports = initSocketServer; // ✅ Export function
+initSocketServer(server); // ✅ Call initSocketServer to attach socket.io to the server
