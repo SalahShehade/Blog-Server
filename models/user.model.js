@@ -28,6 +28,11 @@ const User = Schema({
     type: Boolean,
     default: false, // Default is not verified
   },
+
+  isBanned: {
+    type: Boolean,
+    default: false, // By default, users are not banned
+  },
 });
 
 module.exports = mongoose.model("User", User);
