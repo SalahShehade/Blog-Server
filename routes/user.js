@@ -209,34 +209,28 @@ router.route("/checkusername/:username").get(async (req, res) => {
 //     });
 // });
 
-router.route("/ban/:email").patch(async (req, res) => {
-  const email = req.params.email;
-
+router.patch("/user/ban/:email", async (req, res) => {
   try {
-    const user = await User.findOne({ email });
-
+    const user = await User.findOne({ email: req.params.email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Toggle the ban status
+    // Toggle the isBanned value
     user.isBanned = !user.isBanned;
-
     await user.save();
 
-    res.status(200).json({
+    res.json({
       Status: true,
-      message: `User has been ${
-        user.isBanned ? "banned" : "unbanned"
-      } successfully.`,
-      isBanned: user.isBanned,
+      isBanned: user.isBanned, // Send updated status to the frontend
+      message: user.isBanned
+        ? "User has been banned"
+        : "User has been unbanned",
     });
   } catch (error) {
-    res.status(500).json({
-      Status: false,
-      message: "Failed to update user status.",
-      error,
-    });
+    res
+      .status(500)
+      .json({ Status: false, message: "Internal server error", error });
   }
 });
 
