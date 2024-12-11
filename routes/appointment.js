@@ -89,7 +89,7 @@ router.patch("/markAvailable/:blogId", async (req, res) => {
   }
 });
 
-router.post("/appointment/book", async (req, res) => {
+router.post("/book", async (req, res) => {
   try {
     const { time, blogId, userName, duration } = req.body;
 
