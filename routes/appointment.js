@@ -13,7 +13,7 @@ router.post("/book", async (req, res) => {
     }
 
     // Format the time correctly to match the DB format
-    const formattedTime = time.length === 5 ? time + ":00" : time; // Make sure the time has seconds, e.g., "09:30:00"
+    const formattedTime = time.slice(0, 5); // Take only HH:mm
 
     const appointment = await Appointment.findOneAndUpdate(
       { blogId, time: formattedTime, status: "available" },
