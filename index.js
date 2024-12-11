@@ -5,12 +5,10 @@ const cors = require("cors");
 var http = require("http");
 const { Server } = require("socket.io"); // ✅ New line for Socket.IO Server import
 
-
-
 //hello world
 //const PORT = process.env.port || 5000;
-const app = express();
-// const PORT = app.listen(process.env.PORT || 5000, function () { ✅ comment for not needed 
+const app = express(); //
+// const PORT = app.listen(process.env.PORT || 5000, function () { ✅ comment for not needed
 //   console.log(
 //     "Express server listening on port %d in %s mode",
 //     this.address().port,
@@ -18,11 +16,10 @@ const app = express();
 //   );
 // });
 
-; //
 //new
- //
+//
 
- app.use((req, res, next) => {
+app.use((req, res, next) => {
   if (req.headers["x-forwarded-proto"] !== "https") {
     return res.redirect(`https://${req.hostname}${req.url}`);
   }
@@ -34,17 +31,13 @@ server.listen(process.env.PORT || 5000, () => {
   console.log("✅ Server is running on port", process.env.PORT || 5000);
 });
 
- //
+//
 
 const events = require("events");
 events.EventEmitter.defaultMaxListeners = 15; // Increase the limit to 15 or more as needed
 
 //app.use(cors({ origin: "http://localhost:57308" })); // Replace with your web app's URL
 //app.use(cors({ origin: "*" })); // Allow requests from any origin
-
-
-
-
 
 mongoose.connect(
   "mongodb+srv://Abdallah:12345@cluster0.njict.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0/myapp"
@@ -75,6 +68,9 @@ app.use("/AddBlogApproval", AddBlogApprovalRoute);
 const blogRoute = require("./routes/blogpost.js");
 app.use("/blogpost", blogRoute);
 
+const appointmentRoute = require("./routes/appointment.js");
+app.use("/appointment", appointmentRoute);
+
 app
   .route("/")
   .get((req, res) =>
@@ -82,11 +78,10 @@ app
   );
 
 // app.listen(PORT, "0.0.0.0", () =>
-//   console.log("Welcome your listening at port: " + PORT) 🔥 comment for not needed 
+//   console.log("Welcome your listening at port: " + PORT) 🔥 comment for not needed
 // );
 
 // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-
 
 const chatRoutes = require("./routes/chat"); // ✅ New line for chat routes import
 const Chat = require("./models/chat.model"); // ✅ Import Chat model
@@ -101,14 +96,11 @@ const initSocketServer = (server) => {
   const io = new Server(server, {
     path: "/socket.io", // 🔥 Remove the trailing slash
     cors: {
-      origin: "*", 
+      origin: "*",
       methods: ["GET", "POST"],
-      credentials: true
+      credentials: true,
     },
   });
-  
-  
-  
 
   // ✅ Handle Socket.IO Connection
   io.on("connection", (socket) => {
@@ -131,7 +123,8 @@ const initSocketServer = (server) => {
 
       try {
         // 🔥 Validate inputs
-        if (!chatId || !senderEmail || !content) throw new Error("Missing required fields in send_message");
+        if (!chatId || !senderEmail || !content)
+          throw new Error("Missing required fields in send_message");
 
         // 🔥 Save the message in the database
         const message = new Message({ chatId, sender: senderEmail, content });
@@ -146,7 +139,9 @@ const initSocketServer = (server) => {
 
         // 🔥 Emit the message to everyone in the chat
         io.to(chatId).emit("receive_message", message);
-        console.log(`📢 New message in chat ${chatId} from ${senderEmail}: ${content}`);
+        console.log(
+          `📢 New message in chat ${chatId} from ${senderEmail}: ${content}`
+        );
       } catch (error) {
         console.error("Error sending message:", error.message);
       }
