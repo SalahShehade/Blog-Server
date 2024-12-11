@@ -92,16 +92,22 @@ router.patch("/markAvailable/:blogId", async (req, res) => {
 router.post("/appointment/book", async (req, res) => {
   try {
     const { time, blogId, userName, duration } = req.body;
-    const user = userName || "John Doe"; // Replace with actual user data
+
+    if (!time || !blogId || !userName) {
+      return res.status(400).json({ message: "Missing required fields." });
+    }
+
+    // Format the time correctly to match the DB format
+    const formattedTime = time.length === 5 ? time + ":00" : time; // Make sure the time has seconds, e.g., "09:30:00"
 
     const appointment = await Appointment.findOneAndUpdate(
-      { blogId, time, status: "available" }, // Ensures slot is available
+      { blogId, time: formattedTime, status: "available" },
       {
         $set: {
-          userName: user,
+          userName: userName,
           status: "booked",
           isConfirmed: true,
-          duration: duration || 30, // If no duration, set to 30 mins
+          duration: duration || 30,
         },
       },
       { new: true }
@@ -115,6 +121,7 @@ router.post("/appointment/book", async (req, res) => {
       .status(200)
       .json({ message: "Slot successfully booked!", data: appointment });
   } catch (error) {
+    console.error("Booking error:", error);
     res.status(500).json({ message: "Failed to book the slot.", error });
   }
 });
