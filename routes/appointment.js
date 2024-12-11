@@ -3,14 +3,6 @@ const router = express.Router();
 const Appointment = require("../models/appointment.model");
 
 // Get all appointments for a specific blog
-router.get("/getAppointments/:blogId", async (req, res) => {
-  try {
-    const appointments = await Appointment.find({ blogId: req.params.blogId });
-    res.status(200).json({ data: appointments });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to get appointments.", error });
-  }
-});
 
 // Add a new available time slot
 router.post("/addAvailableTime", async (req, res) => {
@@ -33,27 +25,99 @@ router.post("/addAvailableTime", async (req, res) => {
   }
 });
 
-// Mark a time slot as available
-router.patch("/markAvailable/:blogId", async (req, res) => {
-  const { time } = req.body;
-
+// Get all appointments for a specific blogId
+router.get("/getAppointments/:blogId", async (req, res) => {
   try {
-    const appointment = await Appointment.findOneAndDelete({
-      blogId: req.params.blogId,
-      time: time,
+    const appointments = await Appointment.find({ blogId: req.params.blogId });
+    const formattedAppointments = appointments.map((appointment) => ({
+      userName: appointment.userName || "Available Slot",
+      time: appointment.time,
+      duration: appointment.duration || 30, // Default duration
+      status: appointment.status || "available", // If status not set, mark it as available
+    }));
+    res.status(200).json({ data: formattedAppointments });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get appointments.", error });
+  }
+});
+
+// Add new available time slot
+router.post("/addAvailableTime", async (req, res) => {
+  try {
+    const { time, blogId } = req.body;
+
+    const newAppointment = new Appointment({
+      time,
+      blogId,
+      userName: "Available Slot",
+      duration: 30, // Default duration for available slots
+      status: "available",
     });
 
-    if (!appointment) {
-      return res.status(404).json({ message: "Appointment not found." });
+    await newAppointment.save();
+    res
+      .status(200)
+      .json({
+        message: "Available time added successfully!",
+        data: newAppointment,
+      });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to add available time.", error });
+  }
+});
+
+// Mark an appointment as available (revert from "booked" to "available")
+router.patch("/markAvailable/:blogId", async (req, res) => {
+  try {
+    const { time } = req.body;
+    const updatedAppointment = await Appointment.findOneAndUpdate(
+      { blogId: req.params.blogId, time },
+      { $set: { status: "available", userName: "Available Slot" } }, // Revert to available
+      { new: true }
+    );
+
+    if (!updatedAppointment) {
+      return res.status(404).json({ message: "Time slot not found." });
     }
 
     res
       .status(200)
-      .json({ message: "Time slot marked as available.", data: appointment });
+      .json({
+        message: "Time slot marked as available!",
+        data: updatedAppointment,
+      });
   } catch (error) {
     res
       .status(500)
       .json({ message: "Failed to mark time as available.", error });
+  }
+});
+
+// Book a slot for a user
+router.post("/bookSlot/:blogId", async (req, res) => {
+  try {
+    const { time, userName, duration } = req.body;
+    const appointment = await Appointment.findOneAndUpdate(
+      { blogId: req.params.blogId, time },
+      {
+        $set: {
+          userName,
+          status: "booked",
+          duration: duration || 30, // Default to 30 minutes if not provided
+        },
+      },
+      { new: true }
+    );
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Time slot not found." });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Slot successfully booked!", data: appointment });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to book the slot.", error });
   }
 });
 
