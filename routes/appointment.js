@@ -4,6 +4,43 @@ const Appointment = require("../models/appointment.model");
 
 // Get all appointments for a specific blog
 
+router.post("/book", async (req, res) => {
+  try {
+    const { time, blogId, userName, duration } = req.body;
+
+    if (!time || !blogId || !userName) {
+      return res.status(400).json({ message: "Missing required fields." });
+    }
+
+    // Format the time correctly to match the DB format
+    const formattedTime = time.length === 5 ? time + ":00" : time; // Make sure the time has seconds, e.g., "09:30:00"
+
+    const appointment = await Appointment.findOneAndUpdate(
+      { blogId, time: formattedTime, status: "available" },
+      {
+        $set: {
+          userName: userName,
+          status: "booked",
+          isConfirmed: true,
+          duration: duration || 30,
+        },
+      },
+      { new: true }
+    );
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Time slot not available." });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Slot successfully booked!", data: appointment });
+  } catch (error) {
+    console.error("Booking error:", error);
+    res.status(500).json({ message: "Failed to book the slot.", error });
+  }
+});
+
 // Add a new available time slot
 router.post("/addAvailableTime", async (req, res) => {
   const { blogId, time } = req.body;
@@ -86,43 +123,6 @@ router.patch("/markAvailable/:blogId", async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to mark time as available.", error });
-  }
-});
-
-router.post("/book", async (req, res) => {
-  try {
-    const { time, blogId, userName, duration } = req.body;
-
-    if (!time || !blogId || !userName) {
-      return res.status(400).json({ message: "Missing required fields." });
-    }
-
-    // Format the time correctly to match the DB format
-    const formattedTime = time.length === 5 ? time + ":00" : time; // Make sure the time has seconds, e.g., "09:30:00"
-
-    const appointment = await Appointment.findOneAndUpdate(
-      { blogId, time: formattedTime, status: "available" },
-      {
-        $set: {
-          userName: userName,
-          status: "booked",
-          isConfirmed: true,
-          duration: duration || 30,
-        },
-      },
-      { new: true }
-    );
-
-    if (!appointment) {
-      return res.status(404).json({ message: "Time slot not available." });
-    }
-
-    res
-      .status(200)
-      .json({ message: "Slot successfully booked!", data: appointment });
-  } catch (error) {
-    console.error("Booking error:", error);
-    res.status(500).json({ message: "Failed to book the slot.", error });
   }
 });
 
