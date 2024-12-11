@@ -55,12 +55,10 @@ router.post("/addAvailableTime", async (req, res) => {
     });
 
     await newAppointment.save();
-    res
-      .status(200)
-      .json({
-        message: "Available time added successfully!",
-        data: newAppointment,
-      });
+    res.status(200).json({
+      message: "Available time added successfully!",
+      data: newAppointment,
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to add available time.", error });
   }
@@ -80,12 +78,10 @@ router.patch("/markAvailable/:blogId", async (req, res) => {
       return res.status(404).json({ message: "Time slot not found." });
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Time slot marked as available!",
-        data: updatedAppointment,
-      });
+    res.status(200).json({
+      message: "Time slot marked as available!",
+      data: updatedAppointment,
+    });
   } catch (error) {
     res
       .status(500)
@@ -93,24 +89,26 @@ router.patch("/markAvailable/:blogId", async (req, res) => {
   }
 });
 
-// Book a slot for a user
-router.post("/bookSlot/:blogId", async (req, res) => {
+router.post("/appointment/book", async (req, res) => {
   try {
-    const { time, userName, duration } = req.body;
+    const { time, blogId, userName, duration } = req.body;
+    const user = userName || "John Doe"; // Replace with actual user data
+
     const appointment = await Appointment.findOneAndUpdate(
-      { blogId: req.params.blogId, time },
+      { blogId, time, status: "available" }, // Ensures slot is available
       {
         $set: {
-          userName,
+          userName: user,
           status: "booked",
-          duration: duration || 30, // Default to 30 minutes if not provided
+          isConfirmed: true,
+          duration: duration || 30, // If no duration, set to 30 mins
         },
       },
       { new: true }
     );
 
     if (!appointment) {
-      return res.status(404).json({ message: "Time slot not found." });
+      return res.status(404).json({ message: "Time slot not available." });
     }
 
     res

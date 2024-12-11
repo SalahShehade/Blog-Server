@@ -6,6 +6,24 @@ const middleware = require("../middleware");
 
 const router = express.Router();
 
+router.get("/getUserName", middleware.checkToken, async (req, res) => {
+  try {
+    const email = req.decoded.email; // Extract email from the decoded JWT
+    if (!email) {
+      return res.status(400).json({ message: "Email not found in token" });
+    }
+
+    const user = await User.findOne({ email: email }, "username email");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ username: user.username, email: user.email });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get username", error });
+  }
+});
+
 router.route("/ban/:email").patch(async (req, res) => {
   const email = req.params.email;
 
