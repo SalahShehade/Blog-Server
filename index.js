@@ -32,7 +32,9 @@ server.listen(process.env.PORT || 5000, () => {
 });
 
 //
-
+app.listen(5000, "0.0.0.0", () => {
+  console.log("Server is running on port 5000");
+});
 const events = require("events");
 events.EventEmitter.defaultMaxListeners = 15; // Increase the limit to 15 or more as needed
 
