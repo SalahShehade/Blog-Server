@@ -6,6 +6,19 @@ const middleware = require("../middleware");
 
 const router = express.Router();
 
+// Add this route to fetch all admin emails
+router.get("/getAdmins", async (req, res) => {
+  try {
+    const admins = await User.find({ role: "admin" }, "email"); // Fetch only admins and their emails
+    const adminEmails = admins.map((admin) => admin.email);
+    res.status(200).json({ adminEmails });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Failed to fetch admin emails.", error: err.message });
+  }
+});
+
 router.get("/getUserName", middleware.checkToken, async (req, res) => {
   try {
     const email = req.decoded.email; // Extract email from the decoded JWT
