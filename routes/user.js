@@ -22,7 +22,7 @@ router.get("/getAdmins", async (req, res) => {
 router.get('/customers', async (req, res) => {
   try {
     // ⭐️ Find users where role is 'customer'
-    const customers = await User.find({ role: 'customer' });
+    const customers = await User.find({ role: 'customer' }).select('-password');
 
     if (!customers || customers.length === 0) {
       return res.status(404).json({ msg: "No customers found" }); // ⭐️ Return 404 if no customers
