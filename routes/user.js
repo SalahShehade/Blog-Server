@@ -460,6 +460,19 @@ router.route("/updateRole/:email").patch(async (req, res) => {
     return res.status(500).json({ msg: err.message });
   }
 });
+
+
+router.get('/customers', async (req, res) => {
+  try {
+    const customers = await User.find({ role: 'customer' }); // ⭐️ Get all users with role 'customer'
+    res.status(200).json(customers);
+  } catch (error) {
+    res.status(500).json({ msg: 'Error fetching customers' });
+  }
+});
+
+
+
 //update the Role of user
 
 module.exports = router;
