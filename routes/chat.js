@@ -36,6 +36,21 @@ router.get("/user-chats", middleware.checkToken, async (req, res) => {
     // Find all chats where the current user's email is in the `users` array
     const chats = await Chat.find({ users: userEmail });
 
+    const usersData = await User.find({ email: { $in: chats.flatMap(chat => chat.users) } });
+    const userMap = usersData.reduce((map, user) => {
+      map[user.email] = user.username; // Map email to username
+      return map;
+    }, {});
+
+    const enrichedChats = chats.map(chat => ({
+      ...chat._doc,
+      users: chat.users.map(email => ({
+        email,
+        username: userMap[email] || 'Unknown' // Get the username from the map or 'Unknown'
+      })),
+    }));
+
+
     res.status(200).json(chats);
   } catch (error) {
     res.status(500).json({ msg: error.message });
@@ -57,7 +72,22 @@ router.post("/create", middleware.checkToken, async (req, res) => {
     });
 
     if (existingChat) {
-      return res.status(200).json(existingChat);
+      // 🔥 Populate the user data in the existing chat before returning it
+      const usersData = await User.find({ email: { $in: existingChat.users } });
+      const userMap = usersData.reduce((map, user) => {
+        map[user.email] = user.username;
+        return map;
+      }, {});
+
+      const enrichedChat = {
+        ...existingChat._doc,
+        users: existingChat.users.map(email => ({
+          email,
+          username: userMap[email] || 'Unknown'
+        })),
+      };
+
+      return res.status(200).json(enrichedChat);
     }
 
     // Create a new chat document
@@ -67,6 +97,21 @@ router.post("/create", middleware.checkToken, async (req, res) => {
     });
 
     await newChat.save();
+
+    const usersData = await User.find({ email: { $in: newChat.users } });
+    const userMap = usersData.reduce((map, user) => {
+      map[user.email] = user.username;
+      return map;
+    }, {});
+
+    const enrichedChat = {
+      ...newChat._doc,
+      users: newChat.users.map(email => ({
+        email,
+        username: userMap[email] || 'Unknown'
+      })),
+    };
+
     res.status(201).json(newChat);
   } catch (error) {
     res.status(500).json({ msg: error.message });
@@ -98,6 +143,13 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
       lastMessageTime: Date.now(), // Update the last message time
     });
 
+     // 🔥 Add the sender's username to the response
+     const sender = await User.findOne({ email: senderEmail });
+     const responseMessage = {
+       ...message._doc,
+       senderUsername: sender ? sender.username : 'Unknown',
+     };
+
     res.status(201).json(message);
   } catch (error) {
     res.status(500).json({ msg: error.message });
@@ -118,6 +170,21 @@ router.get("/messages/:chatId", middleware.checkToken, async (req, res) => {
     if (!chat) {
       return res.status(404).json({ msg: "Chat not found" });
     }
+
+        // 🔥 Get all user emails from the messages
+        const senderEmails = chat.messages.map(message => message.sender);
+        const usersData = await User.find({ email: { $in: senderEmails } });
+        const userMap = usersData.reduce((map, user) => {
+          map[user.email] = user.username;
+          return map;
+        }, {});
+    
+        // 🔥 Include the username in the response for each message
+        const enrichedMessages = chat.messages.map(message => ({
+          ...message._doc,
+          senderUsername: userMap[message.sender] || 'Unknown'
+        }));
+    
 
     res.status(200).json(chat.messages);
   } catch (error) {
