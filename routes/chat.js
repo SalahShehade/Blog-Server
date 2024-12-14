@@ -2,7 +2,7 @@ const express = require("express");
 const Chat = require("../models/chat.model");
 const Message = require("../models/message.model");
 const middleware = require("../middleware");
-
+const User = require("../models/user.model");
 const router = express.Router();
 
 router.route("/getCustomers").get(middleware.checkToken, async (req, res) => {
