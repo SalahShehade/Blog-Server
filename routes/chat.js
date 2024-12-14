@@ -5,6 +5,26 @@ const middleware = require("../middleware");
 
 const router = express.Router();
 
+router.route("/getCustomers").get(middleware.checkToken, async (req, res) => {
+  try {
+    // Fetch only users and customers
+    const response = await User.find(
+      { role: { $in: ["customer"] } }, // Include only users with roles 'user' or 'customer'
+      "email username role isBanned" // Include only these fields
+    );
+
+    console.log("Filtered Users:", response); // Log filtered response
+
+    if (!response || response.length === 0) {
+      return res.status(404).json({ message: "No users or customers found" });
+    }
+
+    return res.json({ data: response });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+});
+
 /**
  * 🟢 Get all chats for a user
  * This route returns all chats where the current user's email is in the `users` array.
@@ -32,7 +52,9 @@ router.post("/create", middleware.checkToken, async (req, res) => {
     const userEmail = req.decoded.email; // Extract user's email from the token
 
     // Check if the chat already exists
-    const existingChat = await Chat.findOne({ users: { $all: [userEmail, shopOwnerEmail] } });
+    const existingChat = await Chat.findOne({
+      users: { $all: [userEmail, shopOwnerEmail] },
+    });
 
     if (existingChat) {
       return res.status(200).json(existingChat);
@@ -91,10 +113,10 @@ router.get("/messages/:chatId", middleware.checkToken, async (req, res) => {
     const { chatId } = req.params;
 
     // Find the chat and return all its messages
-    const chat = await Chat.findById(chatId).populate('messages');
-    
+    const chat = await Chat.findById(chatId).populate("messages");
+
     if (!chat) {
-      return res.status(404).json({ msg: 'Chat not found' });
+      return res.status(404).json({ msg: "Chat not found" });
     }
 
     res.status(200).json(chat.messages);
