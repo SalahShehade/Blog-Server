@@ -2,6 +2,8 @@ const express = require("express");
 const Chat = require("../models/chat.model");
 const Message = require("../models/message.model");
 const middleware = require("../middleware");
+const User = require("../models/user.model");
+
 
 const router = express.Router();
 
@@ -43,14 +45,20 @@ router.get("/user-chats", middleware.checkToken, async (req, res) => {
  */
 router.post("/create", middleware.checkToken, async (req, res) => {
   try {
-    const { shopOwnerEmail } = req.body; // Use shopOwnerEmail from request body
-    const userEmail = req.decoded.email; // Extract user's email from the token
+    const { shopOwnerEmail } = req.body; // ⭐️ Extract shopOwnerEmail from request body
+    const userEmail = req.decoded.email; // ⭐️ Extract user's email from the token
 
-    // Check if the chat already exists
+    // ⭐️ Check if the shop owner exists
+    const shopOwner = await User.findOne({ email: shopOwnerEmail });
+    if (!shopOwner) {
+      return res.status(404).json({ msg: "Shop owner not found" }); // ⭐️ Return 404 if shop owner does not exist
+    }
+
+    // ⭐️ Check if the chat already exists
     const existingChat = await Chat.findOne({ users: { $all: [userEmail, shopOwnerEmail] } });
 
     if (existingChat) {
-      // 🔥 Populate the user data in the existing chat before returning it
+      // ⭐️ Populate the user data in the existing chat before returning it
       const usersData = await User.find({ email: { $in: existingChat.users } });
       const userMap = usersData.reduce((map, user) => {
         map[user.email] = user.username;
@@ -65,17 +73,18 @@ router.post("/create", middleware.checkToken, async (req, res) => {
         })),
       };
 
-      return res.status(200).json(enrichedChat);
+      return res.status(200).json(enrichedChat); // ⭐️ Return the existing enriched chat
     }
 
-    // Create a new chat document
+    // ⭐️ Create a new chat document
     const newChat = new Chat({
-      users: [userEmail, shopOwnerEmail], // Store emails instead of user IDs
-      shopOwner: shopOwnerEmail, // Store the shop owner's email
+      users: [userEmail, shopOwnerEmail], // ⭐️ Store emails instead of user IDs
+      shopOwner: shopOwnerEmail, // ⭐️ Store the shop owner's email
     });
 
     await newChat.save();
 
+    // ⭐️ Populate user data for the newly created chat
     const usersData = await User.find({ email: { $in: newChat.users } });
     const userMap = usersData.reduce((map, user) => {
       map[user.email] = user.username;
@@ -90,9 +99,10 @@ router.post("/create", middleware.checkToken, async (req, res) => {
       })),
     };
 
-    res.status(201).json(newChat);
+    res.status(201).json(enrichedChat); // ⭐️ Return the enriched chat instead of newChat
   } catch (error) {
-    res.status(500).json({ msg: error.message });
+    console.error("Error creating chat:", error); // ⭐️ Log the error to the server
+    res.status(500).json({ msg: error.message }); // ⭐️ Return the error message
   }
 });
 
