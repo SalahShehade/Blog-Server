@@ -73,7 +73,8 @@ router.post("/create", middleware.checkToken, async (req, res) => {
         })),
       };
 
-      return res.status(200).json(enrichedChat); // ⭐️ Return the existing enriched chat
+      return res.status(201).json(enrichedChat); 
+
     }
 
     // ⭐️ Create a new chat document
@@ -128,7 +129,7 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
     await Chat.findByIdAndUpdate(chatId, {
       $push: { messages: message._id }, // Add the message to the chat
       lastMessage: content, // Update the last message content
-      lastMessageTime: Date.now(), // Update the last message time
+      lastMessageTime: null, // Update the last message time
     });
 
      // 🔥 Add the sender's username to the response
