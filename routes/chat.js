@@ -118,23 +118,29 @@ router.post("/create", middleware.checkToken, async (req, res) => {
  */
 router.post("/send-message", middleware.checkToken, async (req, res) => {
   try {
-    const { chatId, content } = req.body;
+    const { chatId, content, receiverEmail } = req.body; // ✅ Extract receiverEmail from request body
     const senderEmail = req.decoded.email; // Extract sender's email from the token
 
-    // Create a new message document
+    // 🔥 Check if the receiverEmail is present
+    if (!receiverEmail) {
+      return res.status(400).json({ msg: 'Receiver email is required.' });
+    }
+
+    // 🔥 Create a new message document
     const message = new Message({
-      chatId, // The chat where the message was sent
-      sender: senderEmail, // Store sender's email instead of userId
-      content, // The actual message content
+      chatId, 
+      sender: senderEmail, 
+      receiver: receiverEmail, // ✅ Include receiver's email
+      content, 
     });
 
     await message.save();
 
-    // Update the chat with the new message
+    // 🔥 Update the chat with the new message
     await Chat.findByIdAndUpdate(chatId, {
       $push: { messages: message._id }, // Add the message to the chat
       lastMessage: content, // Update the last message content
-      lastMessageTime: null, // Update the last message time
+      lastMessageTime: Date.now(), // ✅ Update with current date-time
     });
 
     // 🔥 Add the sender's username to the response
@@ -144,11 +150,12 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
       senderUsername: sender ? sender.username : "Unknown",
     };
 
-    res.status(201).json(message);
+    res.status(201).json(responseMessage); // ✅ Send enriched response with username
   } catch (error) {
     res.status(500).json({ msg: error.message });
   }
 });
+
 
 /**
  * 🟢 Get all messages for a specific chat
