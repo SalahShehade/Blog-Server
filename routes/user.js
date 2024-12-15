@@ -18,8 +18,9 @@ router.get("/search/:username", async (req, res) => {
     });
 
     if (users.length === 0) {
-      // Return an empty list instead of a message
-      return res.status(200).json([]);
+      return res
+        .status(404)
+        .json({ msg: "No users found matching the search query" });
     }
 
     res.status(200).json(users);
