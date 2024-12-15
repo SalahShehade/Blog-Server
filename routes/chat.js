@@ -131,56 +131,65 @@ router.post("/create", middleware.checkToken, async (req, res) => {
  */
 router.post("/send-message", middleware.checkToken, async (req, res) => {
   try {
-    const { chatId, content, receiverEmail } = req.body; 
-    const senderEmail = req.decoded.email; 
+    const { chatId, content, receiverEmail } = req.body; // ✅ Extract receiverEmail from request body
+    const senderEmail = req.decoded.email; // ✅ Extract sender's email from the token
 
-    // 🔥 1. **Check if chat exists**
+    // 🛠️ **Debug Log** — Log to see if the data is being received properly
+    console.log(`Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`);
+
+    // 🔥 Check if the required fields are present
+    if (!chatId) {
+      return res.status(400).json({ msg: 'Chat ID is required.' });
+    }
+    if (!content) {
+      return res.status(400).json({ msg: 'Message content is required.' });
+    }
+    if (!receiverEmail) {
+      return res.status(400).json({ msg: 'Receiver email is required.' });
+    }
+
+    // 🔥 Check if the chat exists
     const chat = await Chat.findById(chatId);
     if (!chat) {
       return res.status(404).json({ msg: 'Chat not found.' });
     }
 
-    // 🔥 2. **Check if the receiver is in the chat**
-    const userEmails = chat.users.map(user => user.email); 
-    if (!userEmails.includes(receiverEmail)) {
+    // 🔥 Check if the receiver is a participant in the chat
+    const isReceiverInChat = chat.users.some(user => user.email === receiverEmail);
+    if (!isReceiverInChat) {
       return res.status(400).json({ msg: 'Receiver is not a participant in this chat.' });
     }
 
-    // 🔥 3. **Log the incoming request data**
-    console.log(`Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`);
-
-    // 🔥 4. **Create a new message document**
+    // 🔥 Create a new message document
     const message = new Message({
       chatId, 
-      sender: senderEmail, 
-      receiver: receiverEmail, 
+      senderEmail, 
+      receiverEmail, 
       content, 
-      timestamp: Date.now() 
+      timestamp: Date.now() // ✅ Ensure timestamp is explicitly added
     });
 
-    // 🔥 5. **Save the message**
-    const savedMessage = await message.save();
-    console.log("📦 Message saved successfully:", savedMessage);
+    await message.save();
 
-    // 🔥 6. **Update the chat with the new message**
-    const updatedChat = await Chat.findByIdAndUpdate(chatId, {
-      $push: { messages: savedMessage._id }, 
-      lastMessage: content, 
-      lastMessageTime: Date.now(), 
-    }, { new: true });
+    // 🔥 Update the chat with the new message
+    await Chat.findByIdAndUpdate(chatId, {
+      $push: { messages: message._id }, // Add the message to the chat
+      lastMessage: content, // Update the last message content
+      lastMessageTime: Date.now(), // ✅ Update with current date-time
+    });
 
-    console.log("✅ Chat updated successfully with new message ID:", savedMessage._id);
+    console.log(`✅ Message created successfully: ${message}`); // 🛠️ Log the message for debugging
 
-    // 🔥 7. **Send a success response**
     res.status(201).json({ 
       msg: 'Message sent successfully', 
-      messageData: savedMessage 
+      messageData: message 
     });
   } catch (error) {
     console.error("❌ Error in /send-message route: ", error);
-    res.status(500).json({ msg: 'An error occurred while sending the message.', error: error.message });
+    res.status(500).json({ msg: 'Internal server error', error: error.message });
   }
 });
+
 
 
 
