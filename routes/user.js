@@ -43,6 +43,22 @@ router.get("/getAdmins", async (req, res) => {
   }
 });
 
+router.get("/customers", async (req, res) => {
+  try {
+    // ⭐️ Find users where role is 'customer'
+    const customers = await User.find({ role: "customer" }).select("-password");
+
+    if (!customers || customers.length === 0) {
+      return res.status(404).json({ msg: "No customers found" }); // ⭐️ Return 404 if no customers
+    }
+
+    res.status(200).json(customers); // ⭐️ Return the list of customers
+  } catch (error) {
+    console.error("Error fetching customers:", error); // Log error
+    res.status(500).json({ msg: "Server error" }); // Return generic server error
+  }
+});
+
 router.get("/getUserName", middleware.checkToken, async (req, res) => {
   try {
     const email = req.decoded.email; // Extract email from the decoded JWT
@@ -482,15 +498,6 @@ router.route("/updateRole/:email").patch(async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ msg: err.message });
-  }
-});
-
-router.get("/customers", async (req, res) => {
-  try {
-    const customers = await User.find({ role: "customer" }); // ⭐️ Get all users with role 'customer'
-    res.status(200).json(customers);
-  } catch (error) {
-    res.status(500).json({ msg: "Error fetching customers" });
   }
 });
 
