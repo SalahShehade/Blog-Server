@@ -4,8 +4,8 @@ const Schema = mongoose.Schema;
 
 const ChatSchema = new Schema({
   users: [{
-    email: { type: String, required: true }, // 🟢 Structured as an object for better control
-    username: { type: String }, // 🟢 Optional - store the username of the user
+    email: { type: String, required: true }, 
+    username: { type: String, required: true }, // ✅ Added 'required: true' for better control
   }],
   shopOwner: {
     type: String, 

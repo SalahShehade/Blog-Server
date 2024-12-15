@@ -72,16 +72,24 @@ router.post("/create", middleware.checkToken, async (req, res) => {
 
     // ✅ Check if the shop owner exists
     const shopOwner = await User.findOne({ email: shopOwnerEmail });
+    const currentUser = await User.findOne({ email: userEmail });
+
     if (!shopOwner) {
       return res.status(404).json({ msg: "Shop owner not found" }); // ✅ Return 404 if shop owner does not exist
     }
 
+    if (!currentUser) {
+      return res.status(404).json({ msg: "User not found" }); // ✅ Return 404 if the current user does not exist
+    }
+
     // ✅ Check if the chat already exists
-    const existingChat = await Chat.findOne({ users: { $all: [userEmail, shopOwnerEmail] } });
+    const existingChat = await Chat.findOne({ 
+      'users.email': { $all: [userEmail, shopOwnerEmail] } 
+    });
 
     if (existingChat) {
       // ✅ Populate the user data for the existing chat
-      const usersData = await User.find({ email: { $in: existingChat.users } });
+      const usersData = await User.find({ email: { $in: existingChat.users.map(u => u.email) } });
       const userMap = usersData.reduce((map, user) => {
         map[user.email] = user.username;
         return map;
@@ -89,9 +97,9 @@ router.post("/create", middleware.checkToken, async (req, res) => {
 
       const enrichedChat = {
         ...existingChat._doc,
-        users: existingChat.users.map((email) => ({
-          email,
-          username: userMap[email] || "Unknown",
+        users: existingChat.users.map((user) => ({
+          email: user.email,
+          username: userMap[user.email] || "Unknown",
         })),
       };
 
@@ -100,14 +108,17 @@ router.post("/create", middleware.checkToken, async (req, res) => {
 
     // ✅ Create a new chat document
     const newChat = new Chat({
-      users: [userEmail, shopOwnerEmail], // ✅ Store emails instead of user IDs
-      shopOwner: shopOwnerEmail, // ✅ Store the shop owner's email
+      users: [
+        { email: userEmail, username: currentUser.username }, 
+        { email: shopOwnerEmail, username: shopOwner.username }
+      ],
+      shopOwner: shopOwnerEmail 
     });
 
     await newChat.save();
 
     // ✅ Populate user data for the newly created chat
-    const usersData = await User.find({ email: { $in: newChat.users } });
+    const usersData = await User.find({ email: { $in: newChat.users.map(u => u.email) } });
     const userMap = usersData.reduce((map, user) => {
       map[user.email] = user.username;
       return map;
@@ -115,9 +126,9 @@ router.post("/create", middleware.checkToken, async (req, res) => {
 
     const enrichedChat = {
       ...newChat._doc,
-      users: newChat.users.map((email) => ({
-        email,
-        username: userMap[email] || "Unknown",
+      users: newChat.users.map((user) => ({
+        email: user.email,
+        username: userMap[user.email] || "Unknown",
       })),
     };
 
@@ -127,6 +138,7 @@ router.post("/create", middleware.checkToken, async (req, res) => {
     res.status(500).json({ msg: 'Internal server error', error: error.message }); // ✅ Avoid exposing raw error messages to clients
   }
 });
+
 
 
 /**
