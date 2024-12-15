@@ -6,6 +6,30 @@ const middleware = require("../middleware");
 
 const router = express.Router();
 
+// Search users by username
+router.get("/search/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    // Perform case-insensitive search using regex
+    const users = await User.find({
+      username: { $regex: username, $options: "i" },
+    });
+
+    if (users.length === 0) {
+      return res
+        .status(404)
+        .json({ msg: "No users found matching the search query" });
+    }
+
+    res.status(200).json(users);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ msg: "Error searching for users", error: error.message });
+  }
+});
+
 // Add this route to fetch all admin emails
 router.get("/getAdmins", async (req, res) => {
   try {
@@ -461,17 +485,14 @@ router.route("/updateRole/:email").patch(async (req, res) => {
   }
 });
 
-
-router.get('/customers', async (req, res) => {
+router.get("/customers", async (req, res) => {
   try {
-    const customers = await User.find({ role: 'customer' }); // ⭐️ Get all users with role 'customer'
+    const customers = await User.find({ role: "customer" }); // ⭐️ Get all users with role 'customer'
     res.status(200).json(customers);
   } catch (error) {
-    res.status(500).json({ msg: 'Error fetching customers' });
+    res.status(500).json({ msg: "Error fetching customers" });
   }
 });
-
-
 
 //update the Role of user
 
