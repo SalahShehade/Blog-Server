@@ -12,7 +12,10 @@ const MessageSchema = new Schema({
     type: String, // Use email instead of ObjectId
     required: true,
   },
-  
+  receiver: { 
+    type: String, // New field to track receiver's email
+    required: true,
+  },
   content: {
     type: String,
     required: true,
