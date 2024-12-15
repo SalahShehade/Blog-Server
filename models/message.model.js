@@ -8,12 +8,12 @@ const MessageSchema = new Schema({
     ref: 'Chat',
     required: true,
   },
-  sender: {
-    type: String, // Use email instead of ObjectId
+  senderEmail: { // 🟢 Renamed 'sender' to 'senderEmail' for better clarity
+    type: String, 
     required: true,
   },
-  receiver: { 
-    type: String, // New field to track receiver's email
+  receiverEmail: { // 🟢 Renamed 'receiver' to 'receiverEmail' for better clarity
+    type: String, 
     required: true,
   },
   content: {
@@ -28,6 +28,9 @@ const MessageSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  readBy: [{ // 🟢 Optional - Track users who have read the message
+    type: String // Email of the users who have read the message
+  }],
 });
 
 module.exports = mongoose.model("Message", MessageSchema);

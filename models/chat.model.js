@@ -4,25 +4,24 @@ const Schema = mongoose.Schema;
 
 const ChatSchema = new Schema({
   users: [{
-    type: String, // Use email instead of user ID
-    required: true,
+    email: { type: String, required: true }, // 🟢 Structured as an object for better control
+    username: { type: String }, // 🟢 Optional - store the username of the user
   }],
   shopOwner: {
-    type: String, // Use email instead of user ID
+    type: String, 
     required: true,
   },
-  
   messages: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Message',
   }],
   lastMessage: {
     type: String,
-    default: '',
+    default: null, // 🟢 Use 'null' instead of an empty string
   },
   lastMessageTime: {
     type: Date,
-    default: Date.now,
+    default: null, // 🟢 Use 'null' if no message has been sent
   },
 });
 
