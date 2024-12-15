@@ -12,53 +12,37 @@ const router = express.Router();
  */
 router.get("/user-chats", middleware.checkToken, async (req, res) => {
   try {
-    const userEmail = req.decoded.email; // ✅ Extract user email from the token
+    const userEmail = req.decoded.email; // Extract user email from the token
     
-    // 🔥 Step 1: Get all chats where the user is a participant
-    const chats = await Chat.find({ users: userEmail })
-      .populate({
-        path: 'messages', 
-        select: 'content sender receiver timestamp' // ✅ Populate the message details 
-      });
+    // 🔥 Step 1: Get all chats where the user's email is part of the 'users.email'
+    const chats = await Chat.find({ 'users.email': userEmail }); // ✅ Updated this query to find 'users.email'
 
-    // 🔥 Step 2: Extract unique emails from all chats to fetch user details
-    const uniqueEmails = [...new Set(chats.flatMap((chat) => chat.users))];
-
-    // 🔥 Step 3: Get users' data from the database (only emails from the chats)
-    const usersData = await User.find({ email: { $in: uniqueEmails } }, 'email username'); // ✅ Only get email and username
-
-    // 🔥 Step 4: Create a map to link email to username for fast lookups
+    // 🔥 Step 2: Extract unique emails from the chats
+    const uniqueEmails = [...new Set(chats.flatMap((chat) => chat.users.map(user => user.email)))];
+    
+    // 🔥 Step 3: Get users' data from the database (just the ones in the chat)
+    const usersData = await User.find({ email: { $in: uniqueEmails } });
+    
+    // 🔥 Step 4: Map email to username for fast lookups
     const userMap = new Map(usersData.map((user) => [user.email, user.username])); 
 
-    // 🔥 Step 5: Enrich the chats to include the "username" of each user and attach message details
+    // 🔥 Step 5: Enrich the chats to include the "username" of each user
     const enrichedChats = chats.map((chat) => ({
       ...chat._doc, // Spread operator to get the existing fields of the chat
-      users: chat.users.map((email) => ({
-        email,
-        username: userMap.get(email) || "Unknown", // ✅ Get username from map, default to 'Unknown'
+      users: chat.users.map((user) => ({
+        email: user.email,
+        username: userMap.get(user.email) || "Unknown", // Get username from map, default to 'Unknown'
       })),
-      messages: chat.messages.map((message) => ({
-        _id: message._id,
-        content: message.content,
-        sender: {
-          email: message.sender,
-          username: userMap.get(message.sender) || "Unknown", // ✅ Attach sender username
-        },
-        receiver: {
-          email: message.receiver,
-          username: userMap.get(message.receiver) || "Unknown", // ✅ Attach receiver username
-        },
-        timestamp: message.timestamp
-      }))
     }));
 
     // 🔥 Step 6: Send the enriched chats to the client
-    res.status(200).json(enrichedChats); // ✅ Send the enriched version of chats
+    res.status(200).json(enrichedChats); // ✅ Send the correct enriched version
   } catch (error) {
     console.error("❌ Error fetching user chats:", error.message);
     res.status(500).json({ msg: 'Error fetching user chats', error: error.message });
   }
 });
+
 
 
 /**
