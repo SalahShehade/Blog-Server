@@ -134,64 +134,54 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
     const { chatId, content, receiverEmail } = req.body; 
     const senderEmail = req.decoded.email; 
 
-    // 1️⃣ **Check if the chatId is valid**
-    if (!mongoose.Types.ObjectId.isValid(chatId)) {
-      return res.status(400).json({ msg: 'Invalid chat ID.' });
-    }
-
-    // 2️⃣ **Check if the chat exists**
+    // 🔥 1. **Check if chat exists**
     const chat = await Chat.findById(chatId);
     if (!chat) {
       return res.status(404).json({ msg: 'Chat not found.' });
     }
 
-    // 3️⃣ **Check if the receiver is a participant in the chat**
-    const isParticipant = chat.users.some(user => user.email === receiverEmail);
-    if (!isParticipant) {
+    // 🔥 2. **Check if the receiver is in the chat**
+    const userEmails = chat.users.map(user => user.email); 
+    if (!userEmails.includes(receiverEmail)) {
       return res.status(400).json({ msg: 'Receiver is not a participant in this chat.' });
     }
 
-    // 4️⃣ **Create the new message**
-    const currentTime = new Date();
+    // 🔥 3. **Log the incoming request data**
+    console.log(`Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`);
+
+    // 🔥 4. **Create a new message document**
     const message = new Message({
       chatId, 
       sender: senderEmail, 
       receiver: receiverEmail, 
       content, 
-      timestamp: currentTime 
+      timestamp: Date.now() 
     });
 
-    await message.save();
+    // 🔥 5. **Save the message**
+    const savedMessage = await message.save();
+    console.log("📦 Message saved successfully:", savedMessage);
 
-    // 5️⃣ **Update the chat with the last message and timestamp**
-    await Chat.findByIdAndUpdate(chatId, {
-      $push: { messages: message._id }, 
+    // 🔥 6. **Update the chat with the new message**
+    const updatedChat = await Chat.findByIdAndUpdate(chatId, {
+      $push: { messages: savedMessage._id }, 
       lastMessage: content, 
-      lastMessageTime: currentTime 
-    });
+      lastMessageTime: Date.now(), 
+    }, { new: true });
 
-    // 6️⃣ **Get sender's information (username)**
-    const sender = chat.users.find(user => user.email === senderEmail);
-    const senderUsername = sender ? sender.username : "Unknown";
+    console.log("✅ Chat updated successfully with new message ID:", savedMessage._id);
 
-    // 7️⃣ **Enrich message data for the response**
-    const responseMessage = {
-      ...message._doc,
-      senderUsername
-    };
-
-    // 8️⃣ **Send the message to all participants via Socket.IO**
-    req.io.to(chatId).emit('receive_message', responseMessage);
-
+    // 🔥 7. **Send a success response**
     res.status(201).json({ 
       msg: 'Message sent successfully', 
-      messageData: responseMessage 
+      messageData: savedMessage 
     });
   } catch (error) {
     console.error("❌ Error in /send-message route: ", error);
-    res.status(500).json({ msg: 'An error occurred while sending the message.' });
+    res.status(500).json({ msg: 'An error occurred while sending the message.', error: error.message });
   }
 });
+
 
 
 /**

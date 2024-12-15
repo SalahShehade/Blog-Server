@@ -7,14 +7,19 @@ const MessageSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Chat',
     required: true,
+    index: true // 🟢 Added index for faster lookups
   },
-  senderEmail: { // 🟢 Renamed 'sender' to 'senderEmail' for better clarity
+  senderEmail: { 
     type: String, 
     required: true,
+    match: /.+\@.+\..+/, // 🟢 Ensure it's a valid email
+    index: true // 🟢 Added index for faster lookups
   },
-  receiverEmail: { // 🟢 Renamed 'receiver' to 'receiverEmail' for better clarity
+  receiverEmail: { 
     type: String, 
     required: true,
+    match: /.+\@.+\..+/, // 🟢 Ensure it's a valid email
+    index: true // 🟢 Added index for faster lookups
   },
   content: {
     type: String,
@@ -24,13 +29,17 @@ const MessageSchema = new Schema({
     type: Date,
     default: Date.now,
   },
-  read: {
+  isRead: { // 🟢 Renamed to 'isRead' for better clarity
     type: Boolean,
     default: false,
   },
-  readBy: [{ // 🟢 Optional - Track users who have read the message
-    type: String // Email of the users who have read the message
-  }],
+  readBy: [{ 
+    type: String, // Email of the users who have read the message
+    match: /.+\@.+\..+/ // 🟢 Ensure it's a valid email
+  }]
 });
+
+// 🟢 Add compound index for sender and chatId to speed up querying
+MessageSchema.index({ senderEmail: 1, chatId: 1 });
 
 module.exports = mongoose.model("Message", MessageSchema);
