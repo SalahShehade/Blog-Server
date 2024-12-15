@@ -6,14 +6,15 @@ const middleware = require("../middleware");
 
 const router = express.Router();
 
-// Search users by username
+// Search users by username and filter by role (only 'user' and 'customer')
 router.get("/search/:username", async (req, res) => {
   try {
     const { username } = req.params;
 
     // Perform case-insensitive search using regex
     const users = await User.find({
-      username: { $regex: username, $options: "i" },
+      username: { $regex: username, $options: "i" }, // Case-insensitive search for username
+      role: { $in: ["user", "customer"] }, // Filter only 'user' and 'customer' roles
     });
 
     if (users.length === 0) {
