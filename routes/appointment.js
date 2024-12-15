@@ -4,6 +4,32 @@ const Appointment = require("../models/appointment.model");
 
 // Get all appointments for a specific blog
 
+// Delete all appointment slots for a specific blogId
+router.delete("/deleteAll/:blogId", async (req, res) => {
+  const blogId = req.params.blogId;
+
+  try {
+    const result = await Appointment.deleteMany({ blogId });
+
+    if (result.deletedCount > 0) {
+      res.status(200).json({
+        message: "All time slots deleted successfully!",
+        deletedCount: result.deletedCount,
+      });
+    } else {
+      res.status(404).json({
+        message: "No time slots found for the given blogId.",
+      });
+    }
+  } catch (error) {
+    console.error("Error deleting all slots:", error);
+    res.status(500).json({
+      message: "Failed to delete all time slots.",
+      error: error.message,
+    });
+  }
+});
+
 router.delete("/delete/:blogId/:time", async (req, res) => {
   const { blogId, time } = req.params;
 
