@@ -151,8 +151,8 @@ router.post("/create", middleware.checkToken, async (req, res) => {
 
     // 🔥 **Emit event for users to join this new chat room**
     const io = req.app.get('io'); // ✅ Access socket.io instance
-    io.to(userEmail).emit('join_chat', enrichedChat._id); // 🔥 Emit event to the user to join the new chat
-    io.to(shopOwnerEmail).emit('join_chat', enrichedChat._id); // 🔥 Emit event to the shop owner to join the chat
+    //io.to(userEmail).emit('join_chat', enrichedChat._id); // 🔥 Emit event to the user to join the new chat
+    //io.to(shopOwnerEmail).emit('join_chat', enrichedChat._id); // 🔥 Emit event to the shop owner to join the chat
 
     res.status(201).json(enrichedChat); // ✅ Return the enriched chat with a 201 status
   } catch (error) {
