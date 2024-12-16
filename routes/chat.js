@@ -131,11 +131,11 @@ router.post("/create", middleware.checkToken, async (req, res) => {
  */
 router.post("/send-message", middleware.checkToken, async (req, res) => {
   try {
-    const { chatId, content, receiverEmail } = req.body; // ✅ Extract receiverEmail from request body
-    const senderEmail = req.decoded.email; // ✅ Extract sender's email from the token
+    const { chatId, content, receiverEmail } = req.body; 
+    const senderEmail = req.decoded.email; 
 
     // 🛠️ **Debug Log** — Log to see if the data is being received properly
-    console.log(`Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`);
+    console.log(`📩 Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`);
 
     // 🔥 Check if the required fields are present
     if (!chatId) {
@@ -166,19 +166,28 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
       senderEmail, 
       receiverEmail, 
       content, 
-      timestamp: Date.now() // ✅ Ensure timestamp is explicitly added
+      timestamp: Date.now() 
     });
 
     await message.save();
 
     // 🔥 Update the chat with the new message
     await Chat.findByIdAndUpdate(chatId, {
-      $push: { messages: message._id }, // Add the message to the chat
-      lastMessage: content, // Update the last message content
-      lastMessageTime: Date.now(), // ✅ Update with current date-time
+      $push: { messages: message._id }, 
+      lastMessage: content, 
+      lastMessageTime: Date.now(), 
     });
 
-    console.log(`✅ Message created successfully: ${message}`); // 🛠️ Log the message for debugging
+    console.log(`✅ Message created successfully: ${message}`); 
+
+    // 🔥 Emit message to users in the chat
+    req.app.io.to(chatId).emit('receive_message', {
+      chatId: message.chatId,
+      senderEmail: message.senderEmail,
+      receiverEmail: message.receiverEmail,
+      content: message.content,
+      timestamp: message.timestamp
+    });
 
     res.status(201).json({ 
       msg: 'Message sent successfully', 
@@ -189,6 +198,7 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
     res.status(500).json({ msg: 'Internal server error', error: error.message });
   }
 });
+
 
 
 
