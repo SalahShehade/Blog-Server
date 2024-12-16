@@ -46,6 +46,39 @@ router.get("/user-chats", middleware.checkToken, async (req, res) => {
 
 
 /**
+ * 🟢 Check if a chat already exists between the logged-in user and the given partner
+ */
+router.get("/existing", middleware.checkToken, async (req, res) => {
+  try {
+    const userEmail = req.decoded.email;
+    const partnerEmail = req.query.partnerEmail;
+
+    if (!partnerEmail) {
+      return res.status(400).json({ msg: 'partnerEmail is required' });
+    }
+
+    // Check if there's a chat involving both userEmail and partnerEmail
+    const existingChat = await Chat.findOne({
+      'users.email': { $all: [userEmail, partnerEmail] }
+    });
+
+    if (!existingChat) {
+      // No existing chat found
+      return res.status(200).json({ msg: 'No existing chat found' });
+    }
+
+    // Return the chat ID if found
+    return res.status(200).json({ _id: existingChat._id });
+  } catch (error) {
+    console.error("❌ Error checking existing chat:", error.message);
+    res.status(500).json({ msg: 'Internal server error', error: error.message });
+  }
+});
+
+
+
+
+/**
  * 🟢 Create a chat between a user and a shop
  * This route creates a new chat between the current user and a shop owner.
  */
