@@ -131,64 +131,59 @@ router.post("/create", middleware.checkToken, async (req, res) => {
  */
 router.post("/send-message", middleware.checkToken, async (req, res) => {
   try {
-    const { chatId, content, receiverEmail } = req.body; // ✅ Extract receiverEmail from request body
-    const senderEmail = req.decoded.email; // ✅ Extract sender's email from the token
+    const { chatId, content, receiverEmail } = req.body; 
+    const senderEmail = req.decoded.email; 
 
-    // 🛠️ **Debug Log** — Log to see if the data is being received properly
-    console.log(`Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`);
-
-    // 🔥 Check if the required fields are present
-    if (!chatId) {
-      return res.status(400).json({ msg: 'Chat ID is required.' });
-    }
-    if (!content) {
-      return res.status(400).json({ msg: 'Message content is required.' });
-    }
     if (!receiverEmail) {
       return res.status(400).json({ msg: 'Receiver email is required.' });
     }
 
-    // 🔥 Check if the chat exists
     const chat = await Chat.findById(chatId);
     if (!chat) {
       return res.status(404).json({ msg: 'Chat not found.' });
     }
 
-    // 🔥 Check if the receiver is a participant in the chat
-    const isReceiverInChat = chat.users.some(user => user.email === receiverEmail);
-    if (!isReceiverInChat) {
+    if (!chat.users.includes(receiverEmail)) {
       return res.status(400).json({ msg: 'Receiver is not a participant in this chat.' });
     }
 
-    // 🔥 Create a new message document
     const message = new Message({
       chatId, 
       senderEmail, 
       receiverEmail, 
       content, 
-      timestamp: Date.now() // ✅ Ensure timestamp is explicitly added
+      timestamp: Date.now() 
     });
 
     await message.save();
 
-    // 🔥 Update the chat with the new message
     await Chat.findByIdAndUpdate(chatId, {
-      $push: { messages: message._id }, // Add the message to the chat
-      lastMessage: content, // Update the last message content
-      lastMessageTime: Date.now(), // ✅ Update with current date-time
+      $push: { messages: message._id }, 
+      lastMessage: content, 
+      lastMessageTime: Date.now(), 
     });
 
-    console.log(`✅ Message created successfully: ${message}`); // 🛠️ Log the message for debugging
+    const messageData = {
+      content: message.content,
+      senderEmail: message.senderEmail,
+      receiverEmail: message.receiverEmail,
+      timestamp: message.timestamp
+    };
+
+    // 🔥 Emit the message to **all users in the chat room** 
+    req.app.io.to(chatId).emit('receive_message', messageData); 
 
     res.status(201).json({ 
       msg: 'Message sent successfully', 
-      messageData: message 
+      messageData 
     });
+
   } catch (error) {
     console.error("❌ Error in /send-message route: ", error);
     res.status(500).json({ msg: 'Internal server error', error: error.message });
   }
 });
+
 
 
 
