@@ -3,7 +3,7 @@ const Chat = require("../models/chat.model");
 const Message = require("../models/message.model");
 const middleware = require("../middleware");
 const User = require("../models/user.model");
-
+const io = require('../socket'); // Ensure socket.js is exporting the io instance
 const router = express.Router();
 
 /**
@@ -116,13 +116,17 @@ router.post("/create", middleware.checkToken, async (req, res) => {
       })),
     };
 
+    // 🔥 **Emit event for users to join this new chat room**
+    const io = req.app.get('io'); // ✅ Access socket.io instance
+    io.to(userEmail).emit('join_chat', enrichedChat._id); // 🔥 Emit event to the user to join the new chat
+    io.to(shopOwnerEmail).emit('join_chat', enrichedChat._id); // 🔥 Emit event to the shop owner to join the chat
+
     res.status(201).json(enrichedChat); // ✅ Return the enriched chat with a 201 status
   } catch (error) {
     console.error("❌ Error creating chat:", error); // ✅ Log the error for debugging
     res.status(500).json({ msg: 'Internal server error', error: error.message }); // ✅ Avoid exposing raw error messages to clients
   }
 });
-
 
 
 /**
@@ -169,6 +173,7 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
       timestamp: Date.now() 
     });
 
+    // ✅ Save the message first
     await message.save();
 
     // 🔥 Update the chat with the new message
@@ -180,24 +185,43 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
 
     console.log(`✅ Message created successfully: ${message}`); 
 
-    // 🔥 Emit message to users in the chat
-    req.app.io.to(chatId).emit('receive_message', {
+    // 🔥 Access the socket.io instance
+    const io = req.app.get('io'); 
+    if (!io) {
+      console.error('❌ Socket.io instance not available.');
+      return res.status(500).json({ msg: 'Internal server error: Socket.io instance is missing.' });
+    }
+
+    // 🔥 Enrich the message data before emitting
+    const sender = await User.findOne({ email: senderEmail });
+    const enrichedMessage = {
+      _id: message._id,
       chatId: message.chatId,
       senderEmail: message.senderEmail,
+      senderUsername: sender ? sender.username : "Unknown", // 🔥 Add sender username
       receiverEmail: message.receiverEmail,
       content: message.content,
       timestamp: message.timestamp
-    });
+    };
+
+    // 🔥 Emit message to all users in the chat room
+    try {
+      io.to(chatId).emit('receive_message', enrichedMessage);
+      console.log('✅ Real-time message emitted successfully.');
+    } catch (error) {
+      console.error('❌ Error emitting real-time message:', error);
+    }
 
     res.status(201).json({ 
       msg: 'Message sent successfully', 
-      messageData: message 
+      messageData: enrichedMessage // Return enriched message data to the client
     });
   } catch (error) {
     console.error("❌ Error in /send-message route: ", error);
     res.status(500).json({ msg: 'Internal server error', error: error.message });
   }
 });
+
 
 
 

@@ -4,6 +4,10 @@ const path = require("path");
 const cors = require("cors");
 var http = require("http");
 const { Server } = require("socket.io"); // ✅ New line for Socket.IO Server import
+const chatRoutes = require("./routes/chat"); // ✅ New line for chat routes import
+const Chat = require("./models/chat.model"); // ✅ Import Chat model
+const Message = require("./models/message.model"); // ✅ Import Message model
+
 
 //hello world
 //const PORT = process.env.port || 5000;
@@ -83,10 +87,6 @@ app
 
 // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
-const chatRoutes = require("./routes/chat"); // ✅ New line for chat routes import
-const Chat = require("./models/chat.model"); // ✅ Import Chat model
-const Message = require("./models/message.model"); // ✅ Import Message model
-
 // 2️⃣ **Add Chat Routes**
 app.use("/chat", chatRoutes); // ✅ Register the chat routes
 
@@ -94,13 +94,16 @@ app.use("/chat", chatRoutes); // ✅ Register the chat routes
 const initSocketServer = (server) => {
   // ✅ Attach Socket.IO to the existing server
   const io = new Server(server, {
-    path: "/socket.io", // 🔥 Remove the trailing slash
+    path: "/socket.io", 
     cors: {
       origin: "*",
       methods: ["GET", "POST"],
       credentials: true,
     },
   });
+
+  // ✅ Attach Socket.IO instance to the app for access in route files
+  app.set('io', io); // 🔥 Attach Socket.IO instance to the Express app
 
   // ✅ Handle Socket.IO Connection
   io.on("connection", (socket) => {
@@ -114,20 +117,27 @@ const initSocketServer = (server) => {
         console.log(`📢 User with ID: ${socket.id} joined chat: ${chatId}`);
       } catch (error) {
         console.error("Error joining chat:", error.message);
+        socket.emit('error', { msg: 'Error joining chat', error: error.message }); // Send error back to the client
       }
     });
 
     // 🔥 Listen for "send_message" event to handle messages
     socket.on("send_message", async (data) => {
-      const { chatId, senderEmail, content } = data; // 🔥 Changed "senderId" to "senderEmail"
-
       try {
+        const { chatId, senderEmail, content, receiverEmail } = data; // 🔥 Added 'receiverEmail' to the destructuring
+
         // 🔥 Validate inputs
-        if (!chatId || !senderEmail || !content)
+        if (!chatId || !senderEmail || !content || !receiverEmail)
           throw new Error("Missing required fields in send_message");
 
         // 🔥 Save the message in the database
-        const message = new Message({ chatId, sender: senderEmail, content });
+        const message = new Message({
+          chatId,
+          senderEmail,
+          receiverEmail,
+          content,
+          timestamp: Date.now() // Explicitly add timestamp
+        });
         await message.save();
 
         // 🔥 Update the last message in the chat document
@@ -137,13 +147,22 @@ const initSocketServer = (server) => {
           lastMessageTime: Date.now(),
         });
 
-        // 🔥 Emit the message to everyone in the chat
-        io.to(chatId).emit("receive_message", message);
+        // 🔥 Emit the message to all users in the room (real-time update)
+        io.to(chatId).emit("receive_message", {
+          _id: message._id,
+          chatId: message.chatId,
+          senderEmail: message.senderEmail,
+          receiverEmail: message.receiverEmail,
+          content: message.content,
+          timestamp: message.timestamp,
+        });
+
         console.log(
-          `📢 New message in chat ${chatId} from ${senderEmail}: ${content}`
+          `📢 New message in chat ${chatId} from ${senderEmail} to ${receiverEmail}: ${content}`
         );
       } catch (error) {
         console.error("Error sending message:", error.message);
+        socket.emit('error', { msg: 'Error sending message', error: error.message }); // Send error back to the client
       }
     });
 
@@ -151,6 +170,11 @@ const initSocketServer = (server) => {
     socket.on("disconnect", () => {
       console.log(`❌ User with ID: ${socket.id} disconnected`);
     });
+  });
+
+  // 🔥 Handle global socket errors (like disconnections or connection issues)
+  io.on("error", (error) => {
+    console.error("❌ Global Socket.IO Error:", error.message);
   });
 };
 
