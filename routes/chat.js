@@ -239,7 +239,13 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
 
     // 🔥 Emit message to all users in the chat room
     try {
-      io.to(chatId).emit('receive_message', enrichedMessage);
+     // io.to(chatId).emit('receive_message', enrichedMessage);
+      
+
+      io.to(chatId).emit('receive_message_chatpage', enrichedMessage);
+      io.to(chatId).emit('receive_message_individual', enrichedMessage);
+
+
       console.log('✅ Real-time message emitted successfully.');
     } catch (error) {
       console.error('❌ Error emitting real-time message:', error);
