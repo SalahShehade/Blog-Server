@@ -15,7 +15,7 @@ router.get("/user-chats", middleware.checkToken, async (req, res) => {
     const userEmail = req.decoded.email; // Extract user email from the token
     
     // 🔥 Step 1: Get all chats where the user's email is part of the 'users.email'
-    const chats = await Chat.find({ 'users.email': userEmail }); // ✅ Updated this query to find 'users.email'
+    const chats = await Chat.find({ 'users.email': userEmail }).sort({ lastMessageTime: -1 });
 
     // 🔥 Step 2: Extract unique emails from the chats
     const uniqueEmails = [...new Set(chats.flatMap((chat) => chat.users.map(user => user.email)))];
