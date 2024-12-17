@@ -7,8 +7,7 @@ const Notification = require("../models/notifications.model");
 async function getAdminTokens() {
   // Example: Fetch tokens from your database
   return [
-    "fGxtROI4T1KxEcSkOwAGWb:APA91bGJDyFqu1BGovrDEs2ZOAJ4X4kXFxrGQx2I0_-bnrou7YfPyQYT-CQrl8Zd01Be9fYo9VZNDdIfkURNPiIJrq3Y2wcGYu9MVqpbUS5LZUOp_wsjavg",
-    "f4hUfkiaQoyRlt-QcP_fsN:APA91bG19yNk0OoOxAgZI2g7ZecbblsNSDLnnd0KS67tIaJ0IsrnEb7O_ZY7v54jRCz2-TbHxkyYKSmRR3FNQGXe0vkCAHocnbLOBeg20Hbkb8vqwAzP_qM",
+    "eIVR3dKWQnqa0kDA9wn6DQ:APA91bGHP8ob7tgom41eDtHap2U9RMJ3w9uah2PpSOyydst8xqgydUF5hce-hPQuV1NjdAAUg3CfhQmKN_4J00dmT8mpFjuwDqpEKwGD2dybW3Axid5MfJU",
   ]; // Replace with actual token-fetching logic
 }
 
