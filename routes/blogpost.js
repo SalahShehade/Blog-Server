@@ -34,6 +34,8 @@ router.route("/Add").post(middleware.checkToken, async (req, res) => {
     title: req.body.title,
     body: req.body.body,
     type: req.body.type,
+    lat: req.body.lat,
+    lng: req.body.lng,
   });
 
   blogpost
