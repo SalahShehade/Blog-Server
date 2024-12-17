@@ -20,6 +20,9 @@ const AddBlogApprovalSchema = new mongoose.Schema({
     enum: ["general", "barbershop", "hospital"], // Categories of blogs
     default: "general",
   },
+
+  lat: { type: Number }, // Add latitude
+  lng: { type: Number }, // Add longitude
   createdAt: { type: Date, default: Date.now },
 });
 

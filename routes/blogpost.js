@@ -433,6 +433,8 @@ router
       res.status(200).json({
         blogTitle: blogPost.title,
         authorName: blogPost.email, // Return the username directly
+        lat: blogPost.lat,
+        lng: blogPost.lng,
       });
     } catch (error) {
       console.error("Error fetching blog details:", error);
@@ -633,6 +635,8 @@ router.post("/approve/:id", async (req, res) => {
         title: blog.title,
         body: blog.body,
         email: blog.email,
+        lat: blog.lat, // Copy lat
+        lng: blog.lng, // Copy lng
         status: "published",
         createdAt: blog.createdAt,
       });

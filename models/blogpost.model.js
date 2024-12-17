@@ -35,6 +35,9 @@ const BlogPost = Schema({
     default: "general",
   },
 
+  lat: { type: Number }, // Add latitude
+  lng: { type: Number }, // Add longitude
+
   like: {
     type: Number,
     default: 0,
