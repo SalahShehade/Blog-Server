@@ -13,7 +13,7 @@ async function getAdminTokens() {
 }
 
 // Initialize Firebase Admin
-const serviceAccount = require("../keys/hajzi-d17f3-firebase-adminsdk-hwhrj-b6b6af0970.json");
+const serviceAccount = require("../keys/hajzi-c076f-firebase-adminsdk-iqly4-562bf2691d.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
