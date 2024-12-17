@@ -8,7 +8,6 @@ const chatRoutes = require("./routes/chat"); // ✅ New line for chat routes imp
 const Chat = require("./models/chat.model"); // ✅ Import Chat model
 const Message = require("./models/message.model"); // ✅ Import Message model
 
-
 //hello world
 //const PORT = process.env.port || 5000;
 const app = express(); //
@@ -31,8 +30,8 @@ app.use((req, res, next) => {
 });
 
 var server = http.createServer(app);
-server.listen(process.env.PORT || 5000, () => {
-  console.log("✅ Server is running on port", process.env.PORT || 5000);
+server.listen(process.env.PORT || 5002, () => {
+  console.log("✅ Server is running on port", process.env.PORT || 5002);
 });
 
 //
@@ -94,7 +93,7 @@ app.use("/chat", chatRoutes); // ✅ Register the chat routes
 const initSocketServer = (server) => {
   // ✅ Attach Socket.IO to the existing server
   const io = new Server(server, {
-    path: "/socket.io", 
+    path: "/socket.io",
     cors: {
       origin: "*",
       methods: ["GET", "POST"],
@@ -103,7 +102,7 @@ const initSocketServer = (server) => {
   });
 
   // ✅ Attach Socket.IO instance to the app for access in route files
-  app.set('io', io); // 🔥 Attach Socket.IO instance to the Express app
+  app.set("io", io); // 🔥 Attach Socket.IO instance to the Express app
 
   // ✅ Handle Socket.IO Connection
   io.on("connection", (socket) => {
@@ -117,7 +116,10 @@ const initSocketServer = (server) => {
         console.log(`📢 User with ID: ${socket.id} joined chat: ${chatId}`);
       } catch (error) {
         console.error("Error joining chat:", error.message);
-        socket.emit('error', { msg: 'Error joining chat', error: error.message }); // Send error back to the client
+        socket.emit("error", {
+          msg: "Error joining chat",
+          error: error.message,
+        }); // Send error back to the client
       }
     });
 
@@ -136,7 +138,7 @@ const initSocketServer = (server) => {
           senderEmail,
           receiverEmail,
           content,
-          timestamp: Date.now() // Explicitly add timestamp
+          timestamp: Date.now(), // Explicitly add timestamp
         });
         await message.save();
 
@@ -162,7 +164,10 @@ const initSocketServer = (server) => {
         );
       } catch (error) {
         console.error("Error sending message:", error.message);
-        socket.emit('error', { msg: 'Error sending message', error: error.message }); // Send error back to the client
+        socket.emit("error", {
+          msg: "Error sending message",
+          error: error.message,
+        }); // Send error back to the client
       }
     });
 
