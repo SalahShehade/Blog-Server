@@ -31,6 +31,7 @@ const upload = multer({
 router.route("/Add").post(middleware.checkToken, async (req, res) => {
   const blogpost = BlogPost({
     email: req.decoded.email,
+    username: req.decoded.username,
     title: req.body.title,
     body: req.body.body,
     type: req.body.type,

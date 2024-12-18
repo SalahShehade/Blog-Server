@@ -6,7 +6,7 @@ const router = express.Router();
 // In your addApproval route (AddBlogApproval routes)
 router.post("/addApproval", async (req, res) => {
   try {
-    const { title, body, email, type, lat, lng } = req.body;
+    const { title, body, email, username, type, lat, lng } = req.body;
 
     if (!title || !body || !email || !type) {
       return res.status(400).json({ error: "All fields are required." });
@@ -16,17 +16,24 @@ router.post("/addApproval", async (req, res) => {
       title,
       body,
       email,
+      username,
       type,
     });
     if (existingBlog) {
-      return res
-        .status(409)
-        .json({
-          error: "A blog with the same title, body, and email already exists.",
-        });
+      return res.status(409).json({
+        error: "A blog with the same title, body, and email already exists.",
+      });
     }
 
-    const newBlog = new AddBlogApproval({ title, body, email, type, lat, lng });
+    const newBlog = new AddBlogApproval({
+      title,
+      body,
+      email,
+      username,
+      type,
+      lat,
+      lng,
+    });
     const savedBlog = await newBlog.save();
 
     res
