@@ -435,6 +435,7 @@ router
       res.status(200).json({
         blogTitle: blogPost.title,
         authorName: blogPost.email, // Return the username directly
+        username: blogPost.username,
         lat: blogPost.lat,
         lng: blogPost.lng,
       });
