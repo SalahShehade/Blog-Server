@@ -6,6 +6,30 @@ const middleware = require("../middleware");
 
 const router = express.Router();
 
+router.get("/searchName/:email", async (req, res) => {
+  try {
+    const { email } = req.params; // Extract email from the route parameter
+
+    // Perform case-insensitive search for users with matching email or username
+    const users = await User.find({
+      email: { $regex: email, $options: "i" }, // Case-insensitive search by email
+    });
+
+    if (users.length === 0) {
+      return res
+        .status(404)
+        .json({ msg: "No users found matching the search query" });
+    }
+
+    const usernames = users.map((user) => user.username); // Extract usernames
+    res.status(200).json({ usernames });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ msg: "Error searching for users", error: error.message });
+  }
+});
+
 // Search users by username and filter by role (only 'user' and 'customer')
 router.get("/search/:username", async (req, res) => {
   try {
