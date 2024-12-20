@@ -6,19 +6,21 @@ const multer = require("multer");
 const AddBlogApproval = require("../models/AddBlogApproval.model"); // Adjust the path as needed
 const path = require("path");
 
-const storage = multer.diskStorage({
-  // The path to store the image and file name
-  destination: (req, file, cb) => {
-    cb(null, "./uploads"); // `uploads` is the folder that stores the images
-  },
-  filename: (req, file, cb) => {
-    // Use a unique filename by appending a timestamp
-    const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
-      file.originalname
-    )}`;
-    cb(null, uniqueName);
-  },
-});
+// const storage = multer.diskStorage({
+//   // The path to store the image and file name
+//   destination: (req, file, cb) => {
+//     cb(null, "./uploads"); // `uploads` is the folder that stores the images
+//   },
+//   filename: (req, file, cb) => {
+//     // Use a unique filename by appending a timestamp
+//     const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
+//       file.originalname
+//     )}`;
+//     cb(null, uniqueName);
+//   },
+// });
+
+const storage = multer.memoryStorage(); // Store files in memory
 
 const upload = multer({
   storage: storage,
@@ -226,25 +228,35 @@ router
     }
 
     try {
-      // Get all file paths
-      const imagePaths = req.files.map((file) => file.path);
+      // Upload all files to Cloudinary and store the URLs
+      const uploadPromises = req.files.map((file) => {
+        return new Promise((resolve, reject) => {
+          cloudinary.uploader
+            .upload_stream(
+              { folder: "blog_images" }, // Optional folder name in Cloudinary
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result.secure_url); // Return Cloudinary URL
+              }
+            )
+            .end(file.buffer);
+        });
+      });
 
-      // Fetch the blog post
+      const imageUrls = await Promise.all(uploadPromises); // Wait for all uploads to complete
+
       const blogPost = await BlogPost.findById(req.params.id);
 
       if (!blogPost) {
         return res.status(404).json({ message: "Blog post not found" });
       }
 
-      // Set the previewImage if not already set
+      // Set previewImage if not already set
       if (!blogPost.previewImage || blogPost.previewImage === "") {
-        blogPost.previewImage = imagePaths[0]; // Set the first uploaded image as the previewImage
+        blogPost.previewImage = imageUrls[0]; // Set the first image as preview
       }
 
-      // Add the new images to the coverImages array
-      blogPost.coverImages.push(...imagePaths);
-
-      // Save the updated blog post
+      blogPost.coverImages.push(...imageUrls); // Add image URLs to the coverImages array
       await blogPost.save();
 
       res.status(200).json({
@@ -252,11 +264,9 @@ router
         data: blogPost,
       });
     } catch (err) {
-      console.error(err);
       res.status(500).json({ error: err.message });
     }
   });
-
 router.route("/getOwnBlog").get(middleware.checkToken, async (req, res) => {
   const response = await BlogPost.find({
     email: req.decoded.email,

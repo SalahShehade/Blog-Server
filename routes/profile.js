@@ -6,16 +6,19 @@ const middleware = require("../middleware");
 const multer = require("multer");
 const path = require("path");
 const { abort } = require("process");
+const cloudinary = require("../cloudinary"); // Import Cloudinary
 
-const storage = multer.diskStorage({
-  //the path to store the image and file name
-  destination: (req, file, cb) => {
-    cb(null, "./uploads"); //uploads is the folder that stores the img
-  },
-  filename: (req, file, cb) => {
-    cb(null, req.decoded.email + ".jpg"); //use email to make it unique
-  },
-});
+// const storage = multer.diskStorage({
+//   //the path to store the image and file name
+//   destination: (req, file, cb) => {
+//     cb(null, "./uploads"); //uploads is the folder that stores the img
+//   },
+//   filename: (req, file, cb) => {
+//     cb(null, req.decoded.email + ".jpg"); //use email to make it unique
+//   },
+// });
+
+const storage = multer.memoryStorage(); // Store files in memory
 
 const fileFilter = (req, file, cb) => {
   if (file.mimetype == "image/jpeg" || file.mimetype == "image/png") {
@@ -29,7 +32,7 @@ const upload = multer({
   limits: {
     fileSize: 1024 * 1024 * 6, //6 MB
   },
-  //  fileFilter: fileFilter, // orginally any kind of file can be submitted like img,pdf,doc
+  fileFilter: fileFilter, // orginally any kind of file can be submitted like img,pdf,doc
 });
 
 router
@@ -40,9 +43,25 @@ router
     }
 
     try {
+      // Upload image to Cloudinary
+      const result = await cloudinary.uploader
+        .upload_stream(
+          { folder: "profile_pictures" }, // Optional folder name in Cloudinary
+          (error, result) => {
+            if (error) {
+              return res
+                .status(500)
+                .json({ error: "Cloudinary upload failed" });
+            }
+            return result;
+          }
+        )
+        .end(req.file.buffer); // Upload the file buffer
+
+      // Update Profile with Cloudinary image URL
       const profile = await Profile.findOneAndUpdate(
         { email: req.decoded.email },
-        { $set: { img: req.file.path } },
+        { $set: { img: result.secure_url } }, // Save Cloudinary URL to the database
         { new: true }
       );
 
@@ -51,11 +70,11 @@ router
       }
 
       res.status(200).json({
-        message: "The image added has been successfully updated",
+        message: "Image uploaded successfully",
         data: profile,
       });
     } catch (err) {
-      res.status(500).send(err);
+      res.status(500).json({ error: err.message });
     }
   });
 
