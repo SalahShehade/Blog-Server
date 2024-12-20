@@ -6,7 +6,6 @@ const middleware = require("../middleware");
 const multer = require("multer");
 const path = require("path");
 const { abort } = require("process");
-const cloudinary = require("../cloudinary"); // Import the Cloudinary config
 
 const storage = multer.diskStorage({
   //the path to store the image and file name
@@ -41,24 +40,9 @@ router
     }
 
     try {
-      // Upload the image to Cloudinary
-      const result = await cloudinary.uploader
-        .upload_stream(
-          { folder: "profiles" }, // Optional: specify a folder in Cloudinary
-          (error, result) => {
-            if (error) {
-              return res
-                .status(500)
-                .json({ error: "Cloudinary upload failed" });
-            }
-            return result;
-          }
-        )
-        .end(req.file.buffer); // Pass the file buffer from multer
-
       const profile = await Profile.findOneAndUpdate(
         { email: req.decoded.email },
-        { $set: { img: result.secure_url } },
+        { $set: { img: req.file.path } },
         { new: true }
       );
 
