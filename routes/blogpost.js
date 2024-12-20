@@ -5,7 +5,7 @@ const middleware = require("../middleware");
 const multer = require("multer");
 const AddBlogApproval = require("../models/AddBlogApproval.model"); // Adjust the path as needed
 const path = require("path");
-
+const cloudinary = require("../cloudinary"); // Import Cloudinary configuration
 const storage = multer.diskStorage({
   // The path to store the image and file name
   destination: (req, file, cb) => {
@@ -218,6 +218,45 @@ router.delete("/remove/coverImage/:id", async (req, res) => {
 //       res.status(500).json({ error: err.message });
 //     }
 //   });
+// router
+//   .route("/add/coverImages/:id")
+//   .patch(middleware.checkToken, upload.array("img", 5), async (req, res) => {
+//     if (!req.files || req.files.length === 0) {
+//       return res.status(400).json({ error: "No files uploaded" });
+//     }
+
+//     try {
+//       // Get all file paths
+//       const imagePaths = req.files.map((file) => file.path);
+
+//       // Fetch the blog post
+//       const blogPost = await BlogPost.findById(req.params.id);
+
+//       if (!blogPost) {
+//         return res.status(404).json({ message: "Blog post not found" });
+//       }
+
+//       // Set the previewImage if not already set
+//       if (!blogPost.previewImage || blogPost.previewImage === "") {
+//         blogPost.previewImage = imagePaths[0]; // Set the first uploaded image as the previewImage
+//       }
+
+//       // Add the new images to the coverImages array
+//       blogPost.coverImages.push(...imagePaths);
+
+//       // Save the updated blog post
+//       await blogPost.save();
+
+//       res.status(200).json({
+//         message: "Images uploaded successfully",
+//         data: blogPost,
+//       });
+//     } catch (err) {
+//       console.error(err);
+//       res.status(500).json({ error: err.message });
+//     }
+//   });
+
 router
   .route("/add/coverImages/:id")
   .patch(middleware.checkToken, upload.array("img", 5), async (req, res) => {
@@ -226,8 +265,26 @@ router
     }
 
     try {
-      // Get all file paths
-      const imagePaths = req.files.map((file) => file.path);
+      // Upload all files to Cloudinary
+      const uploadPromises = req.files.map((file) => {
+        return new Promise((resolve, reject) => {
+          cloudinary.uploader
+            .upload_stream(
+              { folder: "blog/coverImages" }, // Optional: specify folder in Cloudinary
+              (error, result) => {
+                if (error) {
+                  reject(error);
+                } else {
+                  resolve(result.secure_url); // Resolve with the secure URL
+                }
+              }
+            )
+            .end(file.buffer); // Pass file buffer from multer
+        });
+      });
+
+      // Wait for all uploads to complete
+      const imageUrls = await Promise.all(uploadPromises);
 
       // Fetch the blog post
       const blogPost = await BlogPost.findById(req.params.id);
@@ -238,11 +295,11 @@ router
 
       // Set the previewImage if not already set
       if (!blogPost.previewImage || blogPost.previewImage === "") {
-        blogPost.previewImage = imagePaths[0]; // Set the first uploaded image as the previewImage
+        blogPost.previewImage = imageUrls[0]; // Use the first uploaded image
       }
 
       // Add the new images to the coverImages array
-      blogPost.coverImages.push(...imagePaths);
+      blogPost.coverImages.push(...imageUrls);
 
       // Save the updated blog post
       await blogPost.save();
@@ -253,7 +310,7 @@ router
       });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Failed to upload images" });
     }
   });
 
