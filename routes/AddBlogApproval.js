@@ -61,14 +61,22 @@ router.get("/requests", async (req, res) => {
 // Example using Express.js
 router.get("/images/:blogId", async (req, res) => {
   const { blogId } = req.params;
+
   try {
-    const blogApproval = await blogpostModel.findById(blogId);
-    if (!blogApproval) {
-      return res.status(404).json({ message: "Blog request not found" });
+    // Find the blog post by ID
+    const blogPost = await BlogPost.findById(blogId);
+
+    if (!blogPost) {
+      return res.status(404).json({ message: "Blog post not found" });
     }
-    res.status(200).json({ images: blogApproval.imageUrls }); // Adjust field name accordingly
+
+    // Return both previewImage and coverImages in the response
+    res.status(200).json({
+      previewImage: blogPost.previewImage,
+      coverImages: blogPost.coverImages,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching blog images:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
