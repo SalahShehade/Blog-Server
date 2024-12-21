@@ -17,7 +17,12 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 6, // 6 MB
+  },
+});
 // In your addApproval route (AddBlogApproval routes)
 router.post("/addApproval", async (req, res) => {
   try {
@@ -81,7 +86,7 @@ router.patch("/previewImage/:id", upload.single("img"), async (req, res) => {
 });
 
 // Endpoint to upload cover images
-router.patch("/coverImages/:id", upload.array("imgs", 5), async (req, res) => {
+router.patch("/coverImages/:id", upload.array("img", 5), async (req, res) => {
   try {
     console.log("Received fields:", req.body);
     console.log("Received files:", req.files);
