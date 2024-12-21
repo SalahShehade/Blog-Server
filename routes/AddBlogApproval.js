@@ -89,9 +89,6 @@ router.patch("/previewImage/:id", upload.single("img"), async (req, res) => {
 // Endpoint to upload cover images
 router.patch("/coverImages/:id", upload.array("img", 5), async (req, res) => {
   try {
-    console.log("Received fields:", req.body);
-    console.log("Received files:", req.files);
-    res.send("Debugging coverImages");
     const blog = await AddBlogApproval.findById(req.params.id);
 
     if (!blog) {
@@ -103,11 +100,13 @@ router.patch("/coverImages/:id", upload.array("img", 5), async (req, res) => {
 
     await blog.save();
 
-    res
+    // Ensure only one response is sent
+    return res
       .status(200)
       .json({ message: "Cover images uploaded successfully", data: blog });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error uploading cover images:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
