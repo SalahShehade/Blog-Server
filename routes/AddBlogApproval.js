@@ -61,54 +61,46 @@ router.post("/addApproval", async (req, res) => {
 });
 
 // Endpoint to upload preview image
-router.patch(
-  "/AddBlogApproval/previewImage/:id",
-  upload.single("img"),
-  async (req, res) => {
-    try {
-      const blog = await AddBlogApproval.findById(req.params.id);
+router.patch("/previewImage/:id", upload.single("img"), async (req, res) => {
+  try {
+    const blog = await AddBlogApproval.findById(req.params.id);
 
-      if (!blog) {
-        return res.status(404).json({ error: "Blog not found" });
-      }
-
-      blog.previewImage = req.file.path;
-      await blog.save();
-
-      res
-        .status(200)
-        .json({ message: "Preview image updated successfully", data: blog });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    if (!blog) {
+      return res.status(404).json({ error: "Blog not found" });
     }
+
+    blog.previewImage = req.file.path;
+    await blog.save();
+
+    res
+      .status(200)
+      .json({ message: "Preview image updated successfully", data: blog });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-);
+});
 
 // Endpoint to upload cover images
-router.patch(
-  "/AddBlogApproval/coverImages/:id",
-  upload.array("imgs", 5),
-  async (req, res) => {
-    try {
-      const blog = await AddBlogApproval.findById(req.params.id);
+router.patch("/coverImages/:id", upload.array("imgs", 5), async (req, res) => {
+  try {
+    const blog = await AddBlogApproval.findById(req.params.id);
 
-      if (!blog) {
-        return res.status(404).json({ error: "Blog not found" });
-      }
-
-      const imagePaths = req.files.map((file) => file.path);
-      blog.coverImages.push(...imagePaths);
-
-      await blog.save();
-
-      res
-        .status(200)
-        .json({ message: "Cover images uploaded successfully", data: blog });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    if (!blog) {
+      return res.status(404).json({ error: "Blog not found" });
     }
+
+    const imagePaths = req.files.map((file) => file.path);
+    blog.coverImages.push(...imagePaths);
+
+    await blog.save();
+
+    res
+      .status(200)
+      .json({ message: "Cover images uploaded successfully", data: blog });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-);
+});
 
 // Assuming you're using Node.js with Express
 router.get("/requests", async (req, res) => {
