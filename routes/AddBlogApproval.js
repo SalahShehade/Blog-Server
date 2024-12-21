@@ -6,17 +6,18 @@ const multer = require("multer");
 const path = require("path");
 
 const storage = multer.diskStorage({
+  // The path to store the image and file name
   destination: (req, file, cb) => {
-    cb(null, "./uploads");
+    cb(null, "./uploads"); // `uploads` is the folder that stores the images
   },
   filename: (req, file, cb) => {
-    cb(
-      null,
-      `${req.params.id}-${Date.now()}${path.extname(file.originalname)}`
-    );
+    // Use a unique filename by appending a timestamp
+    const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
+      file.originalname
+    )}`;
+    cb(null, uniqueName);
   },
 });
-
 const upload = multer({
   storage: storage,
   limits: {
