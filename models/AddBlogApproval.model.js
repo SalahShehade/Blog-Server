@@ -24,6 +24,7 @@ const AddBlogApprovalSchema = new mongoose.Schema({
   lat: { type: Number }, // Add latitude
   lng: { type: Number }, // Add longitude
   createdAt: { type: Date, default: Date.now },
+  imageUrls: [{ type: String }], // New field to store image URLs
 });
 
 AddBlogApprovalSchema.index({ title: 1, body: 1 }, { unique: true }); //to help not dublicate

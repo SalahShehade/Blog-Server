@@ -57,6 +57,21 @@ router.get("/requests", async (req, res) => {
   }
 });
 
+// Example using Express.js
+router.get("/images/:blogId", async (req, res) => {
+  const { blogId } = req.params;
+  try {
+    const blogApproval = await AddBlogApprovalModel.findById(blogId);
+    if (!blogApproval) {
+      return res.status(404).json({ message: "Blog request not found" });
+    }
+    res.status(200).json({ images: blogApproval.imageUrls }); // Adjust field name accordingly
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Get the status of a blog by ID
 router.get("/status/:id", async (req, res) => {
   try {
