@@ -37,7 +37,7 @@ const BlogPost = Schema({
 
   lat: { type: Number }, // Add latitude
   lng: { type: Number }, // Add longitude
-
+  imageUrls: [{ type: String }], // New field to store image URLs
   like: {
     type: Number,
     default: 0,

@@ -1,5 +1,6 @@
 const express = require("express");
 const AddBlogApproval = require("../models/AddBlogApproval.model");
+const blogpostModel = require("../models/blogpost.model");
 
 const router = express.Router();
 
@@ -61,7 +62,7 @@ router.get("/requests", async (req, res) => {
 router.get("/images/:blogId", async (req, res) => {
   const { blogId } = req.params;
   try {
-    const blogApproval = await AddBlogApprovalModel.findById(blogId);
+    const blogApproval = await blogpostModel.findById(blogId);
     if (!blogApproval) {
       return res.status(404).json({ message: "Blog request not found" });
     }
