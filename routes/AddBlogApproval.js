@@ -81,7 +81,7 @@ router.patch("/previewImage/:id", upload.single("img"), async (req, res) => {
 });
 
 // Endpoint to upload cover images
-router.patch("/coverImages/:id", upload.array("imgs", 5), async (req, res) => {
+router.patch("/coverImages/:id", upload.any(), async (req, res) => {
   try {
     console.log("Received fields:", req.body);
     console.log("Received files:", req.files);
