@@ -621,42 +621,75 @@ router.route("/requests").get(middleware.checkToken, async (req, res) => {
 //Approve or Reject a blog
 router.post("/approve/:id", async (req, res) => {
   try {
-    const blogId = req.params.id;
-    const { status } = req.body; // "approved" or "rejected"
+    const { status } = req.body;
+    const blogApproval = await AddBlogApproval.findById(req.params.id);
 
-    if (!["approved", "rejected"].includes(status)) {
-      return res.status(400).json({ error: "Invalid status." });
-    }
-
-    const blog = await AddBlogApproval.findById(blogId);
-    if (!blog) {
-      return res.status(404).json({ error: "Blog not found." });
+    if (!blogApproval) {
+      return res.status(404).json({ error: "Blog not found" });
     }
 
     if (status === "approved") {
-      // Move to blogpost schema
-      const approvedBlog = new BlogPost({
-        title: blog.title,
-        body: blog.body,
-        email: blog.email,
-        lat: blog.lat, // Copy lat
-        lng: blog.lng, // Copy lng
-        status: "published",
-        createdAt: blog.createdAt,
+      const blogPost = new BlogPost({
+        title: blogApproval.title,
+        body: blogApproval.body,
+        email: blogApproval.email,
+        username: blogApproval.username,
+        type: blogApproval.type,
+        lat: blogApproval.lat,
+        lng: blogApproval.lng,
+        status: "approved",
+        previewImage: blogApproval.previewImage,
+        coverImages: blogApproval.coverImages,
       });
 
-      await approvedBlog.save();
+      await blogPost.save();
     }
 
-    // Remove from addBlogApproval schema
-    await blog.remove();
-
+    await blogApproval.remove();
     res.status(200).json({ message: `Blog ${status} successfully.` });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: "Internal server error." });
   }
 });
+
+// router.post("/approve/:id", async (req, res) => {
+//   try {
+//     const blogId = req.params.id;
+//     const { status } = req.body; // "approved" or "rejected"
+
+//     if (!["approved", "rejected"].includes(status)) {
+//       return res.status(400).json({ error: "Invalid status." });
+//     }
+
+//     const blog = await AddBlogApproval.findById(blogId);
+//     if (!blog) {
+//       return res.status(404).json({ error: "Blog not found." });
+//     }
+
+//     if (status === "approved") {
+//       // Move to blogpost schema
+//       const approvedBlog = new BlogPost({
+//         title: blog.title,
+//         body: blog.body,
+//         email: blog.email,
+//         lat: blog.lat, // Copy lat
+//         lng: blog.lng, // Copy lng
+//         status: "published",
+//         createdAt: blog.createdAt,
+//       });
+
+//       await approvedBlog.save();
+//     }
+
+//     // Remove from addBlogApproval schema
+//     await blog.remove();
+
+//     res.status(200).json({ message: `Blog ${status} successfully.` });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Internal server error." });
+//   }
+// });
 
 // Endpoint to search blogs by title
 // router.get("/search", async (req, res) => {

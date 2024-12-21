@@ -2,7 +2,22 @@ const express = require("express");
 const AddBlogApproval = require("../models/AddBlogApproval.model");
 
 const router = express.Router();
+const multer = require("multer");
+const path = require("path");
 
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "./uploads");
+  },
+  filename: (req, file, cb) => {
+    cb(
+      null,
+      `${req.params.id}-${Date.now()}${path.extname(file.originalname)}`
+    );
+  },
+});
+
+const upload = multer({ storage: storage });
 // In your addApproval route (AddBlogApproval routes)
 router.post("/addApproval", async (req, res) => {
   try {
@@ -45,6 +60,56 @@ router.post("/addApproval", async (req, res) => {
   }
 });
 
+// Endpoint to upload preview image
+router.patch(
+  "/AddBlogApproval/previewImage/:id",
+  upload.single("img"),
+  async (req, res) => {
+    try {
+      const blog = await AddBlogApproval.findById(req.params.id);
+
+      if (!blog) {
+        return res.status(404).json({ error: "Blog not found" });
+      }
+
+      blog.previewImage = req.file.path;
+      await blog.save();
+
+      res
+        .status(200)
+        .json({ message: "Preview image updated successfully", data: blog });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
+// Endpoint to upload cover images
+router.patch(
+  "/AddBlogApproval/coverImages/:id",
+  upload.array("imgs", 5),
+  async (req, res) => {
+    try {
+      const blog = await AddBlogApproval.findById(req.params.id);
+
+      if (!blog) {
+        return res.status(404).json({ error: "Blog not found" });
+      }
+
+      const imagePaths = req.files.map((file) => file.path);
+      blog.coverImages.push(...imagePaths);
+
+      await blog.save();
+
+      res
+        .status(200)
+        .json({ message: "Cover images uploaded successfully", data: blog });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
 // Assuming you're using Node.js with Express
 router.get("/requests", async (req, res) => {
   try {
@@ -57,42 +122,6 @@ router.get("/requests", async (req, res) => {
   }
 });
 
-// Endpoint to fetch blog details by ID
-router.get("/:blogId", async (req, res) => {
-  const { blogId } = req.params;
-
-  try {
-    // Find the blog by its ID
-    const blog = await AddBlogApproval.findById(blogId);
-
-    if (!blog) {
-      return res.status(404).json({
-        message: "Blog not found",
-      });
-    }
-
-    // Extract previewImage and coverImages from the blog data
-    const previewImage = blog.previewImage || null;
-    const coverImages = blog.coverImages || [];
-
-    res.status(200).json({
-      data: {
-        id: blog._id,
-        title: blog.title,
-        username: blog.username,
-        email: blog.email,
-        previewImage,
-        coverImages,
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching blog details:", error);
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-});
 // Get the status of a blog by ID
 router.get("/status/:id", async (req, res) => {
   try {
