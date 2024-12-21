@@ -122,6 +122,42 @@ router.get("/requests", async (req, res) => {
   }
 });
 
+// Endpoint to fetch blog approval details by ID
+router.get("/:blogId", async (req, res) => {
+  const { blogId } = req.params;
+
+  try {
+    // Find the blog approval request by ID
+    const blogApproval = await AddBlogApproval.findById(blogId);
+
+    if (!blogApproval) {
+      return res
+        .status(404)
+        .json({ message: "Blog approval request not found" });
+    }
+
+    // Return the blog approval details, including previewImage and coverImages
+    res.status(200).json({
+      data: {
+        id: blogApproval._id,
+        title: blogApproval.title,
+        body: blogApproval.body,
+        email: blogApproval.email,
+        username: blogApproval.username,
+        type: blogApproval.type,
+        lat: blogApproval.lat,
+        lng: blogApproval.lng,
+        previewImage: blogApproval.previewImage || null,
+        coverImages: blogApproval.coverImages || [],
+        createdAt: blogApproval.createdAt,
+        status: blogApproval.status || "pending",
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching blog approval:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 // Get the status of a blog by ID
 router.get("/status/:id", async (req, res) => {
   try {
