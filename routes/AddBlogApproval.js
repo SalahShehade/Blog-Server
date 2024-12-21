@@ -82,7 +82,7 @@ router.patch("/previewImage/:id", upload.single("img"), async (req, res) => {
       .status(200)
       .json({ message: "Preview image updated successfully", data: blog });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
