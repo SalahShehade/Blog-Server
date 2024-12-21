@@ -64,7 +64,7 @@ router.get("/images/:blogId", async (req, res) => {
 
   try {
     // Find the blog post by ID
-    const blogPost = await BlogPost.findById(blogId);
+    const blogPost = await blogPost.findById(blogId);
 
     if (!blogPost) {
       return res.status(404).json({ message: "Blog post not found" });
