@@ -1,6 +1,5 @@
 const express = require("express");
 const AddBlogApproval = require("../models/AddBlogApproval.model");
-const blogpostModel = require("../models/blogpost.model");
 
 const router = express.Router();
 
@@ -55,29 +54,6 @@ router.get("/requests", async (req, res) => {
     res.status(200).json({ data: requests });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch requests" });
-  }
-});
-
-// Example using Express.js
-router.get("/images/:blogId", async (req, res) => {
-  const { blogId } = req.params;
-
-  try {
-    // Find the blog post by ID
-    const blogPost = await blogPost.findById(blogId);
-
-    if (!blogPost) {
-      return res.status(404).json({ message: "Blog post not found" });
-    }
-
-    // Return both previewImage and coverImages in the response
-    res.status(200).json({
-      previewImage: blogPost.previewImage,
-      coverImages: blogPost.coverImages,
-    });
-  } catch (error) {
-    console.error("Error fetching blog images:", error);
-    res.status(500).json({ message: "Server error" });
   }
 });
 
