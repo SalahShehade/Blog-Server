@@ -78,7 +78,7 @@ router.patch("/previewImage/:id", upload.single("img"), async (req, res) => {
     blog.previewImage = req.file.path;
     await blog.save();
 
-    res
+    return res
       .status(200)
       .json({ message: "Preview image updated successfully", data: blog });
   } catch (err) {
