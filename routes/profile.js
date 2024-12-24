@@ -69,6 +69,7 @@ router.route("/add").post(middleware.checkToken, (req, res) => {
     DOB: req.body.DOB,
     titleline: req.body.titleline,
     about: req.body.about,
+    img: req.body.img,
   });
 
   profile
