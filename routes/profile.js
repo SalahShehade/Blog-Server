@@ -42,7 +42,7 @@ router
     try {
       const profile = await Profile.findOneAndUpdate(
         { email: req.decoded.email },
-        { $set: { img: path.basename(req.file.path) } }, // Store only the filename
+        { $set: { img: req.file.path } },
         { new: true }
       );
 
@@ -58,6 +58,7 @@ router
       res.status(500).send(err);
     }
   });
+
 router.route("/add").post(middleware.checkToken, (req, res) => {
   console.log(req.body); // Check if req.body contains the expected data
   console.log("Decoded email:", req.decoded.email);
@@ -91,7 +92,6 @@ router.route("/checkProfile").get(middleware.checkToken, async (req, res) => {
       return res.json({
         Status: true,
         email: req.decoded.email, // this part is added newly for drawer username and profile picture
-        img: result.img, // Ensure the img field is included
       });
     } else {
       return res.json({
