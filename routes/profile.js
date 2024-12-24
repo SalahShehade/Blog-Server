@@ -42,7 +42,7 @@ router
     try {
       const profile = await Profile.findOneAndUpdate(
         { email: req.decoded.email },
-        { $set: { img: req.file.path } },
+        { $set: { img: path.basename(req.file.path) } }, // Store only the filename
         { new: true }
       );
 
@@ -58,7 +58,6 @@ router
       res.status(500).send(err);
     }
   });
-
 router.route("/add").post(middleware.checkToken, (req, res) => {
   console.log(req.body); // Check if req.body contains the expected data
   console.log("Decoded email:", req.decoded.email);
