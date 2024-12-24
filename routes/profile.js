@@ -92,6 +92,7 @@ router.route("/checkProfile").get(middleware.checkToken, async (req, res) => {
       return res.json({
         Status: true,
         email: req.decoded.email, // this part is added newly for drawer username and profile picture
+        img: result.img, // Ensure the img field is included
       });
     } else {
       return res.json({
