@@ -5,13 +5,11 @@ const middleware = require("../middleware");
 const User = require("../models/user.model");
 const io = require("../socket"); // Ensure socket.js is exporting the io instance
 const router = express.Router();
-const Profile = require("../models/profile.model");
 //
 /**
  * 🟢 Get all chats for a user
  * This route returns all chats where the current user's email is in the `users` array.
  */
-// Endpoint to fetch user chats with username and img
 router.get("/user-chats", middleware.checkToken, async (req, res) => {
   try {
     const userEmail = req.decoded.email; // Extract user email from the token
@@ -29,47 +27,21 @@ router.get("/user-chats", middleware.checkToken, async (req, res) => {
     // 🔥 Step 3: Get users' data from the database (just the ones in the chat)
     const usersData = await User.find({ email: { $in: uniqueEmails } });
 
-    // 🔥 Step 4: Get profiles' data from the database
-    const profilesData = await Profile.find({ email: { $in: uniqueEmails } });
+    // 🔥 Step 4: Map email to username for fast lookups
+    const userMap = new Map(
+      usersData.map((user) => [user.email, user.username])
+    );
 
-    // 🔥 Step 5: Create a map that associates email with username and img
-    const userProfileMap = new Map();
-
-    // Populate the map with user data
-    usersData.forEach((user) => {
-      userProfileMap.set(user.email, { username: user.username, img: "" }); // Initialize img as empty
-    });
-
-    // Populate the map with profile img data
-    profilesData.forEach((profile) => {
-      if (userProfileMap.has(profile.email)) {
-        userProfileMap.get(profile.email).img = profile.img || ""; // Set img or default to empty string
-      } else {
-        // If there's a profile without a corresponding user (optional handling)
-        userProfileMap.set(profile.email, {
-          username: "Unknown",
-          img: profile.img || "",
-        });
-      }
-    });
-
-    // 🔥 Step 6: Enrich the chats to include the "username" and "img" of each user
+    // 🔥 Step 5: Enrich the chats to include the "username" of each user
     const enrichedChats = chats.map((chat) => ({
       ...chat._doc, // Spread operator to get the existing fields of the chat
-      users: chat.users.map((user) => {
-        const userInfo = userProfileMap.get(user.email) || {
-          username: "Unknown",
-          img: "",
-        };
-        return {
-          email: user.email,
-          username: userInfo.username,
-          img: userInfo.img,
-        };
-      }),
+      users: chat.users.map((user) => ({
+        email: user.email,
+        username: userMap.get(user.email) || "Unknown", // Get username from map, default to 'Unknown'
+      })),
     }));
 
-    // 🔥 Step 7: Send the enriched chats to the client
+    // 🔥 Step 6: Send the enriched chats to the client
     res.status(200).json(enrichedChats); // ✅ Send the correct enriched version
   } catch (error) {
     console.error("❌ Error fetching user chats:", error.message);
@@ -78,6 +50,7 @@ router.get("/user-chats", middleware.checkToken, async (req, res) => {
       .json({ msg: "Error fetching user chats", error: error.message });
   }
 });
+
 /**
  * 🟢 Check if a chat already exists between the logged-in user and the given partner
  */
