@@ -42,11 +42,15 @@ router.get("/user-chats", middleware.checkToken, async (req, res) => {
 
     // Populate the map with profile img data
     profilesData.forEach((profile) => {
-      const imgUrl = profile.img ? `${BASE_URL}/${profile.img}` : "";
-      userProfileMap.set(profile.email, {
-        username: profile.username,
-        img: imgUrl,
-      });
+      if (userProfileMap.has(profile.email)) {
+        userProfileMap.get(profile.email).img = profile.img || ""; // Set img or default to empty string
+      } else {
+        // If there's a profile without a corresponding user (optional handling)
+        userProfileMap.set(profile.email, {
+          username: "Unknown",
+          img: profile.img || "",
+        });
+      }
     });
 
     // 🔥 Step 6: Enrich the chats to include the "username" and "img" of each user
