@@ -68,22 +68,68 @@ router.get("/getAdmins", async (req, res) => {
   }
 });
 
-router.get("/customers", async (req, res) => {
+// router.get("/customers", async (req, res) => {
+//   try {
+//     // ⭐️ Find users where role is 'customer'
+//     const customers = await User.find({ role: "customer" }).select("-password");
+
+//     if (!customers || customers.length === 0) {
+//       return res.status(404).json({ msg: "No customers found" }); // ⭐️ Return 404 if no customers
+//     }
+
+//     res.status(200).json(customers); // ⭐️ Return the list of customers
+//   } catch (error) {
+//     console.error("Error fetching customers:", error); // Log error
+//     res.status(500).json({ msg: "Server error" }); // Return generic server error
+//   }
+// });
+
+// Route to get all customers with their profile images
+router.get("/customers", middleware.checkToken, async (req, res) => {
   try {
-    // ⭐️ Find users where role is 'customer'
-    const customers = await User.find({ role: "customer" }).select("-password");
+    // ⭐️ Aggregation Pipeline to join User and Profile collections
+    const customers = await User.aggregate([
+      {
+        // Match users with role 'customer'
+        $match: { role: "customer" },
+      },
+      {
+        // Lookup corresponding profile based on email
+        $lookup: {
+          from: "profiles", // Name of the Profile collection in MongoDB
+          localField: "email",
+          foreignField: "email",
+          as: "profile",
+        },
+      },
+      {
+        // Unwind the profile array to simplify the structure
+        $unwind: {
+          path: "$profile",
+          preserveNullAndEmptyArrays: true, // Keeps users even if they don't have a profile
+        },
+      },
+      {
+        // Project the desired fields
+        $project: {
+          password: 0, // Exclude password
+          "profile._id": 0, // Exclude internal profile fields if necessary
+          "profile.__v": 0,
+          // Include other profile fields as needed
+        },
+      },
+    ]);
 
     if (!customers || customers.length === 0) {
-      return res.status(404).json({ msg: "No customers found" }); // ⭐️ Return 404 if no customers
+      return res.status(404).json({ msg: "No customers found" });
     }
 
-    res.status(200).json(customers); // ⭐️ Return the list of customers
+    res.status(200).json(customers);
   } catch (error) {
-    console.error("Error fetching customers:", error); // Log error
-    res.status(500).json({ msg: "Server error" }); // Return generic server error
+    console.error("Error fetching customers:", error);
+    res.status(500).json({ msg: "Server error", error: error.message });
   }
 });
-
 router.get("/getUserName", middleware.checkToken, async (req, res) => {
   try {
     const email = req.decoded.email; // Extract email from the decoded JWT
