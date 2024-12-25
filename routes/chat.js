@@ -5,7 +5,7 @@ const middleware = require("../middleware");
 const User = require("../models/user.model");
 const io = require("../socket"); // Ensure socket.js is exporting the io instance
 const router = express.Router();
-
+//
 /**
  * 🟢 Get all chats for a user
  * This route returns all chats where the current user's email is in the `users` array.
