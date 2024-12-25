@@ -80,6 +80,28 @@ router.route("/add").post(middleware.checkToken, (req, res) => {
     });
 });
 
+// Route to get profile data by email
+router.route("/getDataByEmail").get(middleware.checkToken, async (req, res) => {
+  const { email } = req.query;
+  if (!email) {
+    return res.status(400).json({ msg: "Email is required" });
+  }
+
+  try {
+    const profile = await Profile.findOne({ email });
+    if (!profile) {
+      return res.status(404).json({ msg: "Profile not found" });
+    }
+
+    res.status(200).json({ data: profile });
+  } catch (error) {
+    console.error("❌ Error fetching profile by email:", error.message);
+    res
+      .status(500)
+      .json({ msg: "Internal server error", error: error.message });
+  }
+});
+
 router.route("/checkProfile").get(middleware.checkToken, async (req, res) => {
   // to check wether the usrname exists or not
   try {
