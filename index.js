@@ -55,9 +55,17 @@ connection.on("error", (error) =>
 app.use(express.static(path.join(__dirname, "build/web")));
 
 // Handle all other routes by serving the index.html
+// Fallback route for Flutter web app
 app.get("*", (req, res) => {
+  // Ensure only frontend routes fall here
+  if (
+    req.originalUrl.startsWith("/api") ||
+    req.originalUrl.startsWith("/uploads")
+  ) {
+    return res.status(404).json({ error: "API route not found" });
+  }
   res.sendFile(path.join(__dirname, "build/web", "index.html"));
-}); //here
+});
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 //middleware
 //app.use("/uploads", express.static("uploads"));
