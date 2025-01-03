@@ -55,15 +55,6 @@ connection.on("error", (error) =>
 app.use(express.static(path.join(__dirname, "build/web")));
 
 // Handle all other routes by serving the index.html
-app.get("*", (req, res) => {
-  if (
-    req.originalUrl.startsWith("/api") ||
-    req.originalUrl.startsWith("/uploads")
-  ) {
-    return res.status(404).json({ error: "API route not found" });
-  }
-  res.sendFile(path.join(__dirname, "build/web", "index.html"));
-});
 const userRoute = require("./routes/user.js");
 app.use("/user", userRoute);
 
