@@ -52,7 +52,10 @@ connection.on("error", (error) =>
   console.error("MongoDB connection error:", error)
 );
 
-// Handle all other routes by serving the index.html
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+//middleware
+//app.use("/uploads", express.static("uploads"));
+app.use(express.json()); // to help nodeJs understand json data
 const userRoute = require("./routes/user.js");
 app.use("/user", userRoute);
 
