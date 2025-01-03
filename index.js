@@ -57,7 +57,7 @@ app.use(express.static(path.join(__dirname, "build/web")));
 // Handle all other routes by serving the index.html
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "build/web", "index.html"));
-});
+}); //here
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 //middleware
 //app.use("/uploads", express.static("uploads"));
