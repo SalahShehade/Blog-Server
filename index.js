@@ -51,8 +51,6 @@ connection.once("open", () => console.log("MongoDB connected"));
 connection.on("error", (error) =>
   console.error("MongoDB connection error:", error)
 );
-// Serve static files from the "build/web" directory
-app.use(express.static(path.join(__dirname, "build/web")));
 
 // Handle all other routes by serving the index.html
 const userRoute = require("./routes/user.js");
