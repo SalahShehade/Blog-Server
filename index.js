@@ -55,9 +55,7 @@ connection.on("error", (error) =>
 app.use(express.static(path.join(__dirname, "build/web")));
 
 // Handle all other routes by serving the index.html
-// Fallback route for Flutter web app
 app.get("*", (req, res) => {
-  // Ensure only frontend routes fall here
   if (
     req.originalUrl.startsWith("/api") ||
     req.originalUrl.startsWith("/uploads")
@@ -66,10 +64,6 @@ app.get("*", (req, res) => {
   }
   res.sendFile(path.join(__dirname, "build/web", "index.html"));
 });
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-//middleware
-//app.use("/uploads", express.static("uploads"));
-app.use(express.json()); // to help nodeJs understand json data
 const userRoute = require("./routes/user.js");
 app.use("/user", userRoute);
 
