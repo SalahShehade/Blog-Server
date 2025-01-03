@@ -51,7 +51,13 @@ connection.once("open", () => console.log("MongoDB connected"));
 connection.on("error", (error) =>
   console.error("MongoDB connection error:", error)
 );
+// Serve static files from the "build/web" directory
+app.use(express.static(path.join(__dirname, "build/web")));
 
+// Handle all other routes by serving the index.html
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build/web", "index.html"));
+});
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 //middleware
 //app.use("/uploads", express.static("uploads"));
