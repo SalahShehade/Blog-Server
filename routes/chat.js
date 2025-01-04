@@ -339,20 +339,21 @@ router.get("/messages/:chatId", middleware.checkToken, async (req, res) => {
       return res.status(404).json({ msg: "Chat not found" }); // ✅ Return 404 if chat not found
     }
 
-    // ✅ Get all sender emails from the messages
-    const senderEmails = chat.messages.map((message) => message.senderEmail);
+    // ✅ Get all user emails from the messages
+    const senderEmails = chat.messages.map((message) => message.sender);
     const uniqueEmails = [...new Set(senderEmails)]; // ✅ Ensure no duplicates for efficient lookup
 
     // ✅ Find user data for senders
     const usersData = await User.find({ email: { $in: uniqueEmails } });
-    const userMap = new Map(
-      usersData.map((user) => [user.email, user.username])
-    );
+    const userMap = usersData.reduce((map, user) => {
+      map[user.email] = user.username; // ✅ Map sender's email to username
+      return map;
+    }, {});
 
     // ✅ Attach sender usernames to each message
     const enrichedMessages = chat.messages.map((message) => ({
       ...message._doc, // Spread all existing message data
-      senderUsername: userMap.get(message.senderEmail) || "Unknown", // ✅ Attach username from the userMap
+      senderUsername: userMap[message.sender] || "Unknown", // ✅ Attach username from the userMap
     }));
 
     res.status(200).json(enrichedMessages); // ✅ Return the enriched messages
@@ -360,7 +361,7 @@ router.get("/messages/:chatId", middleware.checkToken, async (req, res) => {
     console.error("❌ Error fetching messages for chat:", error.message); // ✅ Log the error on the server
     res
       .status(500)
-      .json({ msg: "Internal server error", error: error.message });
+      .json({ msg: "Internal server error", error: error.message }); // ✅ Send back proper error message
   }
 });
 
