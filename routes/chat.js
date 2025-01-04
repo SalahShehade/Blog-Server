@@ -200,11 +200,21 @@ router.post("/create", middleware.checkToken, async (req, res) => {
  * This route allows the current user to send a message in a specific chat.
  */
 
-router.post(
-  "/send-message",
-  middleware.checkToken,
-  upload.single("img"),
-  async (req, res) => {
+router.post("/send-message", middleware.checkToken, (req, res) => {
+  upload.single("img")(req, res, async function (err) {
+    if (err instanceof multer.MulterError) {
+      // A Multer error occurred when uploading.
+      console.error("❌ Multer error:", err.message);
+      return res.status(400).json({ msg: err.message });
+    } else if (err) {
+      // An unknown error occurred when uploading.
+      console.error("❌ Unknown error:", err.message);
+      return res
+        .status(500)
+        .json({ msg: "Unknown error occurred during upload." });
+    }
+    // Everything went fine.
+    // Now handle the request as usual
     try {
       const { chatId, content, receiverEmail } = req.body;
       const senderEmail = req.decoded.email;
@@ -281,11 +291,9 @@ router.post(
       const io = req.app.get("io");
       if (!io) {
         console.error("❌ Socket.io instance not available.");
-        return res
-          .status(500)
-          .json({
-            msg: "Internal server error: Socket.io instance is missing.",
-          });
+        return res.status(500).json({
+          msg: "Internal server error: Socket.io instance is missing.",
+        });
       }
 
       // 🔥 Enrich the message data before emitting
@@ -321,8 +329,8 @@ router.post(
         .status(500)
         .json({ msg: "Internal server error", error: error.message });
     }
-  }
-);
+  });
+});
 /**
  * 🟢 Get all messages for a specific chat
  * This route returns all messages for a specific chat.
