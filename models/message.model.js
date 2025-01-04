@@ -43,7 +43,7 @@ const MessageSchema = new Schema({
   ],
 });
 // Custom validator to ensure at least one of content or imageUrl is present
-messageSchema.pre("validate", function (next) {
+MessageSchema.pre("validate", function (next) {
   if (!this.content && !this.imageUrl) {
     this.invalidate("content", "Either content or imageUrl must be provided.");
   }
