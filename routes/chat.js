@@ -6,11 +6,20 @@ const middleware = require("../middleware");
 const User = require("../models/user.model");
 const io = require("../socket"); // Ensure socket.js is exporting the io instance
 const router = express.Router();
+const path = require("path");
+
 //
 /**
  * 🟢 Get all chats for a user
  * This route returns all chats where the current user's email is in the `users` array.
  */
+const fs = require("fs");
+
+// Ensure the uploads directory exists
+const uploadDir = "./uploads";
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
 const storage = multer.diskStorage({
   // The path to store the image and file name
@@ -18,8 +27,9 @@ const storage = multer.diskStorage({
     cb(null, "./uploads"); // `uploads` is the folder that stores the images
   },
   filename: (req, file, cb) => {
-    // Use a unique filename by appending a timestamp
-    const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
+    // Use chatId from the request body and append a timestamp for uniqueness
+    const chatId = req.body.chatId || "unknownChat";
+    const uniqueName = `${chatId}-${Date.now()}${path.extname(
       file.originalname
     )}`;
     cb(null, uniqueName);
