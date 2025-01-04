@@ -23,7 +23,7 @@ const MessageSchema = new Schema({
   },
   content: {
     type: String,
-    required: false, // Make content optional
+    required: true,
   },
   timestamp: {
     type: Date,
@@ -34,20 +34,12 @@ const MessageSchema = new Schema({
     type: Boolean,
     default: false,
   },
-  imageUrl: { type: String, default: null }, // New field for image URL
   readBy: [
     {
       type: String, // Email of the users who have read the message
       match: /.+\@.+\..+/, // 🟢 Ensure it's a valid email
     },
   ],
-});
-// Custom validator to ensure at least one of content or imageUrl is present
-MessageSchema.pre("validate", function (next) {
-  if (!this.content && !this.imageUrl) {
-    this.invalidate("content", "Either content or imageUrl must be provided.");
-  }
-  next();
 });
 
 // 🟢 Add compound index for sender and chatId to speed up querying
