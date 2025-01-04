@@ -23,7 +23,7 @@ const MessageSchema = new Schema({
   },
   content: {
     type: String,
-    required: true,
+    required: false, // Make content optional
   },
   timestamp: {
     type: Date,
@@ -41,6 +41,13 @@ const MessageSchema = new Schema({
       match: /.+\@.+\..+/, // 🟢 Ensure it's a valid email
     },
   ],
+});
+// Custom validator to ensure at least one of content or imageUrl is present
+messageSchema.pre("validate", function (next) {
+  if (!this.content && !this.imageUrl) {
+    this.invalidate("content", "Either content or imageUrl must be provided.");
+  }
+  next();
 });
 
 // 🟢 Add compound index for sender and chatId to speed up querying
