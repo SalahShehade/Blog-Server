@@ -21,9 +21,10 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
 
+// Multer Configuration with fileFilter
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "./uploads"); // Ensure this directory exists
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const chatId = req.body.chatId || "unknownChat";
@@ -40,19 +41,27 @@ const upload = multer({
     fileSize: 1024 * 1024 * 6, // 6 MB
   },
   fileFilter: (req, file, cb) => {
-    // Accept images only
+    // Define allowed file types
     const filetypes = /jpeg|jpg|png|gif/;
     const mimetype = filetypes.test(file.mimetype);
     const extname = filetypes.test(
       path.extname(file.originalname).toLowerCase()
     );
+
+    // Log the file's MIME type and extension for debugging
+    console.log(`📄 Uploading File: ${file.originalname}`);
+    console.log(`🟢 MIME Type: ${file.mimetype}`);
+    console.log(
+      `🟢 Extension: ${path.extname(file.originalname).toLowerCase()}`
+    );
+
     if (mimetype && extname) {
       return cb(null, true);
     }
+    // Reject file and pass error message
     cb(new Error("Only image files are allowed!"));
   },
 });
-
 router.get("/user-chats", middleware.checkToken, async (req, res) => {
   try {
     const userEmail = req.decoded.email; // Extract user email from the token
@@ -229,9 +238,7 @@ router.post("/send-message", middleware.checkToken, (req, res) => {
     } else if (err) {
       // An unknown error occurred when uploading.
       console.error("❌ Unknown error:", err.message);
-      return res
-        .status(500)
-        .json({ msg: "Unknown error occurred during upload." });
+      return res.status(500).json({ msg: err.message });
     }
     // Everything went fine.
     // Now handle the request as usual
@@ -242,7 +249,7 @@ router.post("/send-message", middleware.checkToken, (req, res) => {
 
       // 🛠️ Debug Log
       console.log(
-        `📩 Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`
+        `📩 Creating message with content: "${content}" | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`
       );
 
       // 🔥 Validate required fields
@@ -308,8 +315,8 @@ router.post("/send-message", middleware.checkToken, (req, res) => {
       console.log(`✅ Message created successfully: ${message}`);
 
       // 🔥 Access the Socket.io instance
-      const io = req.app.get("io");
-      if (!io) {
+      const ioInstance = req.app.get("io");
+      if (!ioInstance) {
         console.error("❌ Socket.io instance not available.");
         return res.status(500).json({
           msg: "Internal server error: Socket.io instance is missing.",
@@ -331,8 +338,10 @@ router.post("/send-message", middleware.checkToken, (req, res) => {
 
       // 🔥 Emit the message to all users in the chat room
       try {
-        io.to(chatId).emit("receive_message_chatpage", enrichedMessage);
-        io.to(chatId).emit("receive_message_individual", enrichedMessage);
+        ioInstance.to(chatId).emit("receive_message_chatpage", enrichedMessage);
+        ioInstance
+          .to(chatId)
+          .emit("receive_message_individual", enrichedMessage);
         console.log("✅ Real-time message emitted successfully.");
       } catch (error) {
         console.error("❌ Error emitting real-time message:", error);
@@ -351,6 +360,7 @@ router.post("/send-message", middleware.checkToken, (req, res) => {
     }
   });
 });
+
 /**
  * 🟢 Get all messages for a specific chat
  * This route returns all messages for a specific chat.
