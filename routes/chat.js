@@ -22,12 +22,10 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 const storage = multer.diskStorage({
-  // The path to store the image and file name
   destination: (req, file, cb) => {
-    cb(null, "./uploads"); // `uploads` is the folder that stores the images
+    cb(null, "./uploads"); // Ensure this directory exists
   },
   filename: (req, file, cb) => {
-    // Use chatId from the request body and append a timestamp for uniqueness
     const chatId = req.body.chatId || "unknownChat";
     const uniqueName = `${chatId}-${Date.now()}${path.extname(
       file.originalname
@@ -40,6 +38,18 @@ const upload = multer({
   storage: storage,
   limits: {
     fileSize: 1024 * 1024 * 6, // 6 MB
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images only
+    const filetypes = /jpeg|jpg|png|gif/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Only image files are allowed!"));
   },
 });
 
