@@ -1,5 +1,6 @@
 const express = require("express");
 const Chat = require("../models/chat.model");
+const multer = require("multer");
 const Message = require("../models/message.model");
 const middleware = require("../middleware");
 const User = require("../models/user.model");
@@ -10,6 +11,28 @@ const router = express.Router();
  * 🟢 Get all chats for a user
  * This route returns all chats where the current user's email is in the `users` array.
  */
+
+const storage = multer.diskStorage({
+  // The path to store the image and file name
+  destination: (req, file, cb) => {
+    cb(null, "./uploads"); // `uploads` is the folder that stores the images
+  },
+  filename: (req, file, cb) => {
+    // Use a unique filename by appending a timestamp
+    const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
+      file.originalname
+    )}`;
+    cb(null, uniqueName);
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 6, // 6 MB
+  },
+});
+
 router.get("/user-chats", middleware.checkToken, async (req, res) => {
   try {
     const userEmail = req.decoded.email; // Extract user email from the token
@@ -176,109 +199,130 @@ router.post("/create", middleware.checkToken, async (req, res) => {
  * 🟢 Send a message in a chat
  * This route allows the current user to send a message in a specific chat.
  */
-router.post("/send-message", middleware.checkToken, async (req, res) => {
-  try {
-    const { chatId, content, receiverEmail } = req.body;
-    const senderEmail = req.decoded.email;
 
-    // 🛠️ **Debug Log** — Log to see if the data is being received properly
-    console.log(
-      `📩 Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`
-    );
-
-    // 🔥 Check if the required fields are present
-    if (!chatId) {
-      return res.status(400).json({ msg: "Chat ID is required." });
-    }
-    if (!content) {
-      return res.status(400).json({ msg: "Message content is required." });
-    }
-    if (!receiverEmail) {
-      return res.status(400).json({ msg: "Receiver email is required." });
-    }
-
-    // 🔥 Check if the chat exists
-    const chat = await Chat.findById(chatId);
-    if (!chat) {
-      return res.status(404).json({ msg: "Chat not found." });
-    }
-
-    // 🔥 Check if the receiver is a participant in the chat
-    const isReceiverInChat = chat.users.some(
-      (user) => user.email === receiverEmail
-    );
-    if (!isReceiverInChat) {
-      return res
-        .status(400)
-        .json({ msg: "Receiver is not a participant in this chat." });
-    }
-
-    // 🔥 Create a new message document
-    const message = new Message({
-      chatId,
-      senderEmail,
-      receiverEmail,
-      content,
-      timestamp: Date.now(),
-    });
-
-    // ✅ Save the message first
-    await message.save();
-
-    // 🔥 Update the chat with the new message
-    await Chat.findByIdAndUpdate(chatId, {
-      $push: { messages: message._id },
-      lastMessage: content,
-      lastMessageTime: Date.now(),
-    });
-
-    console.log(`✅ Message created successfully: ${message}`);
-
-    // 🔥 Access the socket.io instance
-    const io = req.app.get("io");
-    if (!io) {
-      console.error("❌ Socket.io instance not available.");
-      return res
-        .status(500)
-        .json({ msg: "Internal server error: Socket.io instance is missing." });
-    }
-
-    // 🔥 Enrich the message data before emitting
-    const sender = await User.findOne({ email: senderEmail });
-    const enrichedMessage = {
-      _id: message._id,
-      chatId: message.chatId,
-      senderEmail: message.senderEmail,
-      senderUsername: sender ? sender.username : "Unknown", // 🔥 Add sender username
-      receiverEmail: message.receiverEmail,
-      content: message.content,
-      timestamp: message.timestamp,
-    };
-
-    // 🔥 Emit message to all users in the chat room
+router.post(
+  "/send-message",
+  middleware.checkToken,
+  upload.single("img"),
+  async (req, res) => {
     try {
-      // io.to(chatId).emit('receive_message', enrichedMessage);
+      const { chatId, content, receiverEmail } = req.body;
+      const senderEmail = req.decoded.email;
+      let imageUrl = null;
 
-      io.to(chatId).emit("receive_message_chatpage", enrichedMessage);
-      io.to(chatId).emit("receive_message_individual", enrichedMessage);
+      // 🛠️ Debug Log
+      console.log(
+        `📩 Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`
+      );
 
-      console.log("✅ Real-time message emitted successfully.");
+      // 🔥 Validate required fields
+      if (!chatId) {
+        return res.status(400).json({ msg: "Chat ID is required." });
+      }
+
+      if (!content && !req.file) {
+        // Allow messages with only images
+        return res
+          .status(400)
+          .json({ msg: "Either message content or image is required." });
+      }
+
+      if (!receiverEmail) {
+        return res.status(400).json({ msg: "Receiver email is required." });
+      }
+
+      // 🔥 Check if the chat exists
+      const chat = await Chat.findById(chatId);
+      if (!chat) {
+        return res.status(404).json({ msg: "Chat not found." });
+      }
+
+      // 🔥 Check if the receiver is part of the chat
+      const isReceiverInChat = chat.users.some(
+        (user) => user.email === receiverEmail
+      );
+      if (!isReceiverInChat) {
+        return res
+          .status(400)
+          .json({ msg: "Receiver is not a participant in this chat." });
+      }
+
+      // 🔥 If an image is uploaded, construct its URL
+      if (req.file) {
+        imageUrl = `${req.protocol}://${req.get("host")}/uploads/${
+          req.file.filename
+        }`;
+        console.log(`✅ Image uploaded successfully: ${imageUrl}`);
+      }
+
+      // 🔥 Create a new message document
+      const message = new Message({
+        chatId,
+        senderEmail,
+        receiverEmail,
+        content: content || "", // Default to empty string if no content
+        imageUrl, // Include imageUrl if an image was uploaded
+        timestamp: Date.now(),
+      });
+
+      // ✅ Save the message
+      await message.save();
+
+      // 🔥 Update the chat with the new message
+      await Chat.findByIdAndUpdate(chatId, {
+        $push: { messages: message._id },
+        lastMessage: content ? content : imageUrl ? "Image" : "", // Update last message appropriately
+        lastMessageTime: Date.now(),
+      });
+
+      console.log(`✅ Message created successfully: ${message}`);
+
+      // 🔥 Access the Socket.io instance
+      const io = req.app.get("io");
+      if (!io) {
+        console.error("❌ Socket.io instance not available.");
+        return res
+          .status(500)
+          .json({
+            msg: "Internal server error: Socket.io instance is missing.",
+          });
+      }
+
+      // 🔥 Enrich the message data before emitting
+      const sender = await User.findOne({ email: senderEmail });
+      const enrichedMessage = {
+        _id: message._id,
+        chatId: message.chatId,
+        senderEmail: message.senderEmail,
+        senderUsername: sender ? sender.username : "Unknown",
+        receiverEmail: message.receiverEmail,
+        content: message.content,
+        imageUrl: message.imageUrl,
+        timestamp: message.timestamp,
+      };
+
+      // 🔥 Emit the message to all users in the chat room
+      try {
+        io.to(chatId).emit("receive_message_chatpage", enrichedMessage);
+        io.to(chatId).emit("receive_message_individual", enrichedMessage);
+        console.log("✅ Real-time message emitted successfully.");
+      } catch (error) {
+        console.error("❌ Error emitting real-time message:", error);
+      }
+
+      // ✅ Respond to the client
+      res.status(201).json({
+        msg: "Message sent successfully",
+        messageData: enrichedMessage,
+      });
     } catch (error) {
-      console.error("❌ Error emitting real-time message:", error);
+      console.error("❌ Error in /send-message route: ", error);
+      res
+        .status(500)
+        .json({ msg: "Internal server error", error: error.message });
     }
-
-    res.status(201).json({
-      msg: "Message sent successfully",
-      messageData: enrichedMessage, // Return enriched message data to the client
-    });
-  } catch (error) {
-    console.error("❌ Error in /send-message route: ", error);
-    res
-      .status(500)
-      .json({ msg: "Internal server error", error: error.message });
   }
-});
-
+);
 /**
  * 🟢 Get all messages for a specific chat
  * This route returns all messages for a specific chat.
