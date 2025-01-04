@@ -1,49 +1,52 @@
-const mongoose = require("mongoose");
+// message.model.js
 
+const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const MessageSchema = new Schema({
   chatId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Chat',
+    ref: "Chat",
     required: true,
-    index: true
+    index: true, 
   },
-  senderEmail: { 
-    type: String, 
+  senderEmail: {
+    type: String,
     required: true,
     match: /.+\@.+\..+/,
-    index: true
+    index: true,
   },
-  receiverEmail: { 
-    type: String, 
+  receiverEmail: {
+    type: String,
     required: true,
     match: /.+\@.+\..+/,
-    index: true
+    index: true,
   },
   content: {
     type: String,
-    default: '', // Make content optional if sending only images
+    default: "", // Make this optional if sending only images
   },
-  image: {
-    type: String, // URL to the image
-    default: '',
+  // ➜ Add an optional imageUrl field
+  imageUrl: {
+    type: String,
+    default: "",
   },
   timestamp: {
     type: Date,
     default: Date.now,
   },
-  isRead: { 
+  isRead: {
     type: Boolean,
     default: false,
   },
-  readBy: [{ 
-    type: String,
-    match: /.+\@.+\..+/
-  }]
+  readBy: [
+    {
+      type: String,
+      match: /.+\@.+\..+/,
+    },
+  ],
 });
 
-// Compound index for sender and chatId
 MessageSchema.index({ senderEmail: 1, chatId: 1 });
 
 module.exports = mongoose.model("Message", MessageSchema);
