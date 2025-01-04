@@ -176,22 +176,26 @@ router.post("/create", middleware.checkToken, async (req, res) => {
  * 🟢 Send a message in a chat
  * This route allows the current user to send a message in a specific chat.
  */
+/**
+ * 🟢 Send a message in a chat
+ * This route allows the current user to send a message in a specific chat.
+ */
 router.post("/send-message", middleware.checkToken, async (req, res) => {
   try {
-    const { chatId, content, receiverEmail } = req.body;
+    const { chatId, content, receiverEmail, image } = req.body;
     const senderEmail = req.decoded.email;
 
-    // 🛠️ **Debug Log** — Log to see if the data is being received properly
+    // 🛠️ Debug Log
     console.log(
-      `📩 Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`
+      `📩 Creating message with content: ${content} | Image: ${image} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`
     );
 
-    // 🔥 Check if the required fields are present
+    // 🔥 Validate required fields
     if (!chatId) {
       return res.status(400).json({ msg: "Chat ID is required." });
     }
-    if (!content) {
-      return res.status(400).json({ msg: "Message content is required." });
+    if (!content && !image) {
+      return res.status(400).json({ msg: "Message content or image is required." });
     }
     if (!receiverEmail) {
       return res.status(400).json({ msg: "Receiver email is required." });
@@ -218,17 +222,18 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
       chatId,
       senderEmail,
       receiverEmail,
-      content,
+      content: content || '',
+      image: image || '',
       timestamp: Date.now(),
     });
 
-    // ✅ Save the message first
+    // ✅ Save the message
     await message.save();
 
     // 🔥 Update the chat with the new message
     await Chat.findByIdAndUpdate(chatId, {
       $push: { messages: message._id },
-      lastMessage: content,
+      lastMessage: content || (image ? '📷 Image' : ''),
       lastMessageTime: Date.now(),
     });
 
@@ -249,16 +254,15 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
       _id: message._id,
       chatId: message.chatId,
       senderEmail: message.senderEmail,
-      senderUsername: sender ? sender.username : "Unknown", // 🔥 Add sender username
+      senderUsername: sender ? sender.username : "Unknown",
       receiverEmail: message.receiverEmail,
       content: message.content,
+      image: message.image,
       timestamp: message.timestamp,
     };
 
     // 🔥 Emit message to all users in the chat room
     try {
-      // io.to(chatId).emit('receive_message', enrichedMessage);
-
       io.to(chatId).emit("receive_message_chatpage", enrichedMessage);
       io.to(chatId).emit("receive_message_individual", enrichedMessage);
 
@@ -269,7 +273,7 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
 
     res.status(201).json({
       msg: "Message sent successfully",
-      messageData: enrichedMessage, // Return enriched message data to the client
+      messageData: enrichedMessage,
     });
   } catch (error) {
     console.error("❌ Error in /send-message route: ", error);
@@ -278,6 +282,7 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
       .json({ msg: "Internal server error", error: error.message });
   }
 });
+
 
 /**
  * 🟢 Get all messages for a specific chat

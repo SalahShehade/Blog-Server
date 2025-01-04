@@ -7,39 +7,43 @@ const MessageSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Chat',
     required: true,
-    index: true // 🟢 Added index for faster lookups
+    index: true
   },
   senderEmail: { 
     type: String, 
     required: true,
-    match: /.+\@.+\..+/, // 🟢 Ensure it's a valid email
-    index: true // 🟢 Added index for faster lookups
+    match: /.+\@.+\..+/,
+    index: true
   },
   receiverEmail: { 
     type: String, 
     required: true,
-    match: /.+\@.+\..+/, // 🟢 Ensure it's a valid email
-    index: true // 🟢 Added index for faster lookups
+    match: /.+\@.+\..+/,
+    index: true
   },
   content: {
     type: String,
-    required: true,
+    default: '', // Make content optional if sending only images
+  },
+  image: {
+    type: String, // URL to the image
+    default: '',
   },
   timestamp: {
     type: Date,
     default: Date.now,
   },
-  isRead: { // 🟢 Renamed to 'isRead' for better clarity
+  isRead: { 
     type: Boolean,
     default: false,
   },
   readBy: [{ 
-    type: String, // Email of the users who have read the message
-    match: /.+\@.+\..+/ // 🟢 Ensure it's a valid email
+    type: String,
+    match: /.+\@.+\..+/
   }]
 });
 
-// 🟢 Add compound index for sender and chatId to speed up querying
+// Compound index for sender and chatId
 MessageSchema.index({ senderEmail: 1, chatId: 1 });
 
 module.exports = mongoose.model("Message", MessageSchema);
