@@ -139,50 +139,35 @@ router.get("/existing", middleware.checkToken, async (req, res) => {
  * 🟢 Create a chat between a user and a shop
  * This route creates a new chat between the current user and a shop owner.
  */
+// POST /chat/create
 router.post("/create", middleware.checkToken, async (req, res) => {
   try {
-    const { shopOwnerEmail } = req.body; // ✅ Extract shopOwnerEmail from request body
-    const userEmail = req.decoded.email; // ✅ Extract user's email from the token
+    const { shopOwnerEmail } = req.body; // Extract shopOwnerEmail from request body
+    const userEmail = req.decoded.email; // Extract user's email from the token
 
-    // ✅ Check if the shop owner exists
+    // Check if the shop owner exists
     const shopOwner = await User.findOne({ email: shopOwnerEmail });
     const currentUser = await User.findOne({ email: userEmail });
 
     if (!shopOwner) {
-      return res.status(404).json({ msg: "Shop owner not found" }); // ✅ Return 404 if shop owner does not exist
+      return res.status(404).json({ msg: "Shop owner not found" });
     }
 
     if (!currentUser) {
-      return res.status(404).json({ msg: "User not found" }); // ✅ Return 404 if the current user does not exist
+      return res.status(404).json({ msg: "User not found" });
     }
 
-    // ✅ Check if the chat already exists
+    // Check if the chat already exists
     const existingChat = await Chat.findOne({
       "users.email": { $all: [userEmail, shopOwnerEmail] },
     });
 
     if (existingChat) {
-      // ✅ Populate the user data for the existing chat
-      const usersData = await User.find({
-        email: { $in: existingChat.users.map((u) => u.email) },
-      });
-      const userMap = usersData.reduce((map, user) => {
-        map[user.email] = user.username;
-        return map;
-      }, {});
-
-      const enrichedChat = {
-        ...existingChat._doc,
-        users: existingChat.users.map((user) => ({
-          email: user.email,
-          username: userMap[user.email] || "Unknown",
-        })),
-      };
-
-      return res.status(200).json(enrichedChat); // ✅ Use 200 for "chat already exists"
+      // Chat already exists, return chatId
+      return res.status(200).json({ chatId: existingChat._id });
     }
 
-    // ✅ Create a new chat document
+    // Create a new chat document
     const newChat = new Chat({
       users: [
         { email: userEmail, username: currentUser.username },
@@ -193,37 +178,15 @@ router.post("/create", middleware.checkToken, async (req, res) => {
 
     await newChat.save();
 
-    // ✅ Populate user data for the newly created chat
-    const usersData = await User.find({
-      email: { $in: newChat.users.map((u) => u.email) },
-    });
-    const userMap = usersData.reduce((map, user) => {
-      map[user.email] = user.username;
-      return map;
-    }, {});
-
-    const enrichedChat = {
-      ...newChat._doc,
-      users: newChat.users.map((user) => ({
-        email: user.email,
-        username: userMap[user.email] || "Unknown",
-      })),
-    };
-
-    // 🔥 **Emit event for users to join this new chat room**
-    const io = req.app.get("io"); // ✅ Access socket.io instance
-    //io.to(userEmail).emit('join_chat', enrichedChat._id); // 🔥 Emit event to the user to join the new chat
-    //io.to(shopOwnerEmail).emit('join_chat', enrichedChat._id); // 🔥 Emit event to the shop owner to join the chat
-
-    res.status(201).json(enrichedChat); // ✅ Return the enriched chat with a 201 status
+    // Respond with the new chatId
+    return res.status(201).json({ chatId: newChat._id });
   } catch (error) {
-    console.error("❌ Error creating chat:", error); // ✅ Log the error for debugging
-    res
+    console.error("❌ Error creating chat:", error); // Log the error for debugging
+    return res
       .status(500)
-      .json({ msg: "Internal server error", error: error.message }); // ✅ Avoid exposing raw error messages to clients
+      .json({ msg: "Internal server error", error: error.message }); // Avoid exposing raw error messages to clients
   }
 });
-
 /**
  * 🟢 Send a message in a chat
  * This route allows the current user to send a message in a specific chat.
