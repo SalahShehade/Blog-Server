@@ -1,52 +1,45 @@
-// message.model.js
-
 const mongoose = require("mongoose");
+
 const Schema = mongoose.Schema;
 
 const MessageSchema = new Schema({
   chatId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Chat",
+    ref: 'Chat',
     required: true,
-    index: true, 
+    index: true // 🟢 Added index for faster lookups
   },
-  senderEmail: {
-    type: String,
+  senderEmail: { 
+    type: String, 
     required: true,
-    match: /.+\@.+\..+/,
-    index: true,
+    match: /.+\@.+\..+/, // 🟢 Ensure it's a valid email
+    index: true // 🟢 Added index for faster lookups
   },
-  receiverEmail: {
-    type: String,
+  receiverEmail: { 
+    type: String, 
     required: true,
-    match: /.+\@.+\..+/,
-    index: true,
+    match: /.+\@.+\..+/, // 🟢 Ensure it's a valid email
+    index: true // 🟢 Added index for faster lookups
   },
   content: {
     type: String,
-    default: "", // Make this optional if sending only images
-  },
-  // ➜ Add an optional imageUrl field
-  imageUrl: {
-    type: String,
-    default: "",
+    required: true,
   },
   timestamp: {
     type: Date,
     default: Date.now,
   },
-  isRead: {
+  isRead: { // 🟢 Renamed to 'isRead' for better clarity
     type: Boolean,
     default: false,
   },
-  readBy: [
-    {
-      type: String,
-      match: /.+\@.+\..+/,
-    },
-  ],
+  readBy: [{ 
+    type: String, // Email of the users who have read the message
+    match: /.+\@.+\..+/ // 🟢 Ensure it's a valid email
+  }]
 });
 
+// 🟢 Add compound index for sender and chatId to speed up querying
 MessageSchema.index({ senderEmail: 1, chatId: 1 });
 
 module.exports = mongoose.model("Message", MessageSchema);

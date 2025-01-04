@@ -34,12 +34,7 @@ server.listen(process.env.PORT || 5002, () => {
   console.log("✅ Server is running on port", process.env.PORT || 5002);
 });
 
-// Serve 'uploads' folder statically
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-// Use the upload route
-const uploadRoutes = require("./routes/upload");
-app.use("/api", uploadRoutes);
+//
 
 const events = require("events");
 events.EventEmitter.defaultMaxListeners = 15; // Increase the limit to 15 or more as needed

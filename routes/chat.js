@@ -176,38 +176,34 @@ router.post("/create", middleware.checkToken, async (req, res) => {
  * 🟢 Send a message in a chat
  * This route allows the current user to send a message in a specific chat.
  */
-// routes/chat.js
-
 router.post("/send-message", middleware.checkToken, async (req, res) => {
   try {
-    // Add `imageUrl` as optional
-    const { chatId, content, receiverEmail, imageUrl } = req.body;
+    const { chatId, content, receiverEmail } = req.body;
     const senderEmail = req.decoded.email;
 
+    // 🛠️ **Debug Log** — Log to see if the data is being received properly
     console.log(
-      `📩 Creating message with content: ${content}, imageUrl: ${imageUrl}, Chat ID: ${chatId}, Sender: ${senderEmail}, Receiver: ${receiverEmail}`
+      `📩 Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`
     );
 
+    // 🔥 Check if the required fields are present
     if (!chatId) {
       return res.status(400).json({ msg: "Chat ID is required." });
     }
-    // Ensure at least text or image is provided
-    if (!content && !imageUrl) {
-      return res
-        .status(400)
-        .json({ msg: "Message content or imageUrl is required." });
+    if (!content) {
+      return res.status(400).json({ msg: "Message content is required." });
     }
     if (!receiverEmail) {
       return res.status(400).json({ msg: "Receiver email is required." });
     }
 
-    // Validate chat
+    // 🔥 Check if the chat exists
     const chat = await Chat.findById(chatId);
     if (!chat) {
       return res.status(404).json({ msg: "Chat not found." });
     }
 
-    // Check if the receiver is actually in the chat
+    // 🔥 Check if the receiver is a participant in the chat
     const isReceiverInChat = chat.users.some(
       (user) => user.email === receiverEmail
     );
@@ -217,64 +213,71 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
         .json({ msg: "Receiver is not a participant in this chat." });
     }
 
-    // Create message document
+    // 🔥 Create a new message document
     const message = new Message({
       chatId,
       senderEmail,
       receiverEmail,
-      content: content || "",      // default to empty if no text
-      imageUrl: imageUrl || "",    // store imageUrl if provided
+      content,
       timestamp: Date.now(),
     });
 
+    // ✅ Save the message first
     await message.save();
 
-    // Update the chat’s last message preview
+    // 🔥 Update the chat with the new message
     await Chat.findByIdAndUpdate(chatId, {
       $push: { messages: message._id },
-      // Show '📷 Image' if message only has image
-      lastMessage: content || (imageUrl ? "📷 Image" : ""),
+      lastMessage: content,
       lastMessageTime: Date.now(),
     });
 
-    console.log(`✅ Message created: ${message}`);
+    console.log(`✅ Message created successfully: ${message}`);
 
-    // Emit via Socket.io
+    // 🔥 Access the socket.io instance
     const io = req.app.get("io");
     if (!io) {
       console.error("❌ Socket.io instance not available.");
       return res
         .status(500)
-        .json({ msg: "Internal server error: No socket instance" });
+        .json({ msg: "Internal server error: Socket.io instance is missing." });
     }
 
+    // 🔥 Enrich the message data before emitting
     const sender = await User.findOne({ email: senderEmail });
     const enrichedMessage = {
       _id: message._id,
       chatId: message.chatId,
       senderEmail: message.senderEmail,
-      senderUsername: sender ? sender.username : "Unknown",
+      senderUsername: sender ? sender.username : "Unknown", // 🔥 Add sender username
       receiverEmail: message.receiverEmail,
       content: message.content,
-      imageUrl: message.imageUrl, // Include imageUrl in the emitted data
       timestamp: message.timestamp,
     };
 
-    // Emit to the room
-    io.to(chatId).emit("receive_message_chatpage", enrichedMessage);
-    io.to(chatId).emit("receive_message_individual", enrichedMessage);
+    // 🔥 Emit message to all users in the chat room
+    try {
+      // io.to(chatId).emit('receive_message', enrichedMessage);
 
-    return res
-      .status(201)
-      .json({ msg: "Message sent successfully", messageData: enrichedMessage });
+      io.to(chatId).emit("receive_message_chatpage", enrichedMessage);
+      io.to(chatId).emit("receive_message_individual", enrichedMessage);
+
+      console.log("✅ Real-time message emitted successfully.");
+    } catch (error) {
+      console.error("❌ Error emitting real-time message:", error);
+    }
+
+    res.status(201).json({
+      msg: "Message sent successfully",
+      messageData: enrichedMessage, // Return enriched message data to the client
+    });
   } catch (error) {
     console.error("❌ Error in /send-message route: ", error);
-    return res
+    res
       .status(500)
       .json({ msg: "Internal server error", error: error.message });
   }
 });
-
 
 /**
  * 🟢 Get all messages for a specific chat
