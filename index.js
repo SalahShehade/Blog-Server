@@ -53,6 +53,8 @@ connection.on("error", (error) =>
 );
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Serve static files from the build/web directory
+app.use(express.static(path.join(__dirname, "build", "web")));
 //middleware
 //app.use("/uploads", express.static("uploads"));
 app.use(express.json()); // to help nodeJs understand json data
@@ -74,11 +76,14 @@ app.use("/blogpost", blogRoute);
 const appointmentRoute = require("./routes/appointment.js");
 app.use("/appointment", appointmentRoute);
 
-app
-  .route("/")
-  .get((req, res) =>
-    res.json("Welcome to my Hajzi app. Have fun with Booking freely!!")
-  );
+// app
+//   .route("/")
+//   .get((req, res) =>
+//     res.json("Welcome to my Hajzi app. Have fun with Booking freely!!")
+//   );
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "web", "index.html"));
+});
 
 // app.listen(PORT, "0.0.0.0", () =>
 //   console.log("Welcome your listening at port: " + PORT) 🔥 comment for not needed
