@@ -85,6 +85,11 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "build", "web", "index.html"));
 });
 
+// Catch-all route to handle client-side routing
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "web", "index.html"));
+});
+
 // app.listen(PORT, "0.0.0.0", () =>
 //   console.log("Welcome your listening at port: " + PORT) 🔥 comment for not needed
 // );
