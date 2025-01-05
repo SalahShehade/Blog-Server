@@ -279,6 +279,50 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
   }
 });
 
+router.patch("/delete-message", middleware.checkToken, async (req, res) => {
+  try {
+    const { messageId } = req.body;
+    const userEmail = req.decoded.email;
+
+    if (!messageId) {
+      return res.status(400).json({ msg: "messageId is required." });
+    }
+
+    // Find the message by ID
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ msg: "Message not found." });
+    }
+
+    // Ensure the requester is the sender of the message
+    if (message.senderEmail !== userEmail) {
+      return res
+        .status(403)
+        .json({ msg: "Unauthorized to delete this message." });
+    }
+
+    // Update the message content
+    message.content = "Message has been deleted";
+    await message.save();
+
+    // Emit the update to all clients in the chat room
+    const io = req.app.get("io"); // Ensure you've set io in your app
+    if (io) {
+      io.to(message.chatId.toString()).emit("update_message", {
+        _id: message._id,
+        content: message.content,
+      });
+    }
+
+    res.status(200).json({ msg: "Message deleted successfully." });
+  } catch (error) {
+    console.error("❌ Error deleting message:", error.message);
+    res
+      .status(500)
+      .json({ msg: "Internal server error.", error: error.message });
+  }
+});
+
 /**
  * 🟢 Get all messages for a specific chat
  * This route returns all messages for a specific chat.
