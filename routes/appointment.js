@@ -54,33 +54,43 @@ router.patch("/updateUser/:blogId/:time", async (req, res) => {
   const { blogId, time } = req.params;
   const { newUserName } = req.body;
 
-  // Basic email validation
+  // Basic email validation (allowing "Available Slot" as a valid userName)
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(newUserName)) {
+  if (newUserName !== "Available Slot" && !emailRegex.test(newUserName)) {
     return res.status(400).json({ message: "Invalid email format." });
   }
 
   try {
-    const updatedAppointment = await Appointment.findOneAndUpdate(
-      { blogId, time, status: "booked" }, // Ensure only booked slots can be updated
-      { $set: { userName: newUserName } },
-      { new: true }
-    );
+    // Find the appointment slot
+    const appointment = await Appointment.findOne({ blogId, time });
 
-    if (!updatedAppointment) {
-      return res.status(404).json({ message: "Booked time slot not found." });
+    if (!appointment) {
+      return res.status(404).json({ message: "Time slot not found." });
     }
+
+    // If updating to a real email, mark as booked
+    if (newUserName !== "Available Slot") {
+      appointment.userName = newUserName;
+      appointment.status = "booked";
+      appointment.isConfirmed = true; // Assuming you want to confirm bookings
+    } else {
+      // If setting back to "Available Slot", mark as available
+      appointment.userName = "Available Slot";
+      appointment.status = "available";
+      appointment.isConfirmed = false;
+    }
+
+    await appointment.save();
 
     res.status(200).json({
       message: "User email updated successfully!",
-      data: updatedAppointment,
+      data: appointment,
     });
   } catch (error) {
     console.error("Error updating user email:", error);
     res.status(500).json({ message: "Failed to update user email.", error });
   }
 });
-
 router.post("/book", async (req, res) => {
   try {
     const { time, blogId, userName, duration } = req.body;
