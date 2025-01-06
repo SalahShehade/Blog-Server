@@ -49,6 +49,38 @@ router.delete("/delete/:blogId/:time", async (req, res) => {
   }
 });
 
+// Update userName (email) for a specific appointment slot
+router.patch("/updateUser/:blogId/:time", async (req, res) => {
+  const { blogId, time } = req.params;
+  const { newUserName } = req.body;
+
+  // Basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(newUserName)) {
+    return res.status(400).json({ message: "Invalid email format." });
+  }
+
+  try {
+    const updatedAppointment = await Appointment.findOneAndUpdate(
+      { blogId, time, status: "booked" }, // Ensure only booked slots can be updated
+      { $set: { userName: newUserName } },
+      { new: true }
+    );
+
+    if (!updatedAppointment) {
+      return res.status(404).json({ message: "Booked time slot not found." });
+    }
+
+    res.status(200).json({
+      message: "User email updated successfully!",
+      data: updatedAppointment,
+    });
+  } catch (error) {
+    console.error("Error updating user email:", error);
+    res.status(500).json({ message: "Failed to update user email.", error });
+  }
+});
+
 router.post("/book", async (req, res) => {
   try {
     const { time, blogId, userName, duration } = req.body;
