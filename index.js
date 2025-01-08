@@ -23,6 +23,13 @@ const app = express(); //
 //
 
 app.use((req, res, next) => {
+  // If request is a WebSocket upgrade, skip the HTTPS redirect
+  if (
+    req.headers.upgrade &&
+    req.headers.upgrade.toLowerCase() === "websocket"
+  ) {
+    return next();
+  }
   if (req.headers["x-forwarded-proto"] !== "https") {
     return res.redirect(`https://${req.hostname}${req.url}`);
   }
