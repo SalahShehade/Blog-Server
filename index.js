@@ -30,8 +30,8 @@ app.use((req, res, next) => {
 });
 
 var server = http.createServer(app);
-server.listen(process.env.PORT || 8080, () => {
-  console.log("✅ Server is running on port", process.env.PORT || 8080);
+server.listen(process.env.PORT || 5002, () => {
+  console.log("✅ Server is running on port", process.env.PORT || 5002);
 });
 
 //
