@@ -23,13 +23,6 @@ const app = express(); //
 //
 
 app.use((req, res, next) => {
-  // If request is a WebSocket upgrade, skip the HTTPS redirect
-  if (
-    req.headers.upgrade &&
-    req.headers.upgrade.toLowerCase() === "websocket"
-  ) {
-    return next();
-  }
   if (req.headers["x-forwarded-proto"] !== "https") {
     return res.redirect(`https://${req.hostname}${req.url}`);
   }
@@ -37,8 +30,8 @@ app.use((req, res, next) => {
 });
 
 var server = http.createServer(app);
-server.listen(process.env.PORT || 8080, () => {
-  console.log("✅ Server is running on port", process.env.PORT || 8080);
+server.listen(process.env.PORT || 5002, () => {
+  console.log("✅ Server is running on port", process.env.PORT || 5002);
 });
 
 //
