@@ -3,7 +3,3 @@ env: standard # This indicates flexible environment
 
 network:
   session_affinity: true
-
-automatic_scaling:
-  max_instances: 10
-  min_instances: 1
