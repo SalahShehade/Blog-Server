@@ -1,3 +1,5 @@
 runtime: nodejs20 # You can change the version if needed
 env: standard # This indicates flexible environment
 
+network:
+  session_affinity: true
