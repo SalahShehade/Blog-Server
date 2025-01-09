@@ -36,32 +36,37 @@ const upload = multer({
   },
   //  fileFilter: fileFilter, // orginally any kind of file can be submitted like img,pdf,doc
 });
-const uploadFileToFirebase = async (file, destinationPath) => {
+const uploadImageToFirebase = async (file, destination) => {
   try {
-    const fileUpload = bucket.file(destinationPath);
+    const fileUpload = bucket.file(destination);
 
-    // Create a stream to upload the file
     const stream = fileUpload.createWriteStream({
       metadata: {
-        contentType: file.mimetype, // Use the file's mimetype
+        contentType: file.mimetype,
       },
     });
 
-    stream.on("error", (err) => {
-      throw new Error("Error uploading to Firebase: " + err.message);
+    return new Promise((resolve, reject) => {
+      stream.on("error", (err) => {
+        reject(new Error("Error uploading to Firebase: " + err.message));
+      });
+
+      stream.on("finish", async () => {
+        try {
+          await fileUpload.makePublic();
+          console.log(`File ${destination} is now public.`);
+          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${destination}`;
+          resolve(publicUrl);
+        } catch (err) {
+          console.error(`Failed to make file public: ${err}`);
+          reject(new Error("Error making file public: " + err.message));
+        }
+      });
+
+      stream.end(file.buffer);
     });
-
-    stream.on("finish", async () => {
-      // Make the file public
-      await fileUpload.makePublic();
-    });
-
-    stream.end(file.buffer);
-
-    // Return the public URL for the uploaded file
-    return `https://storage.googleapis.com/${bucket.name}/${destinationPath}`;
   } catch (error) {
-    console.error("Error uploading file to Firebase:", error.message);
+    console.error("Error uploading image to Firebase:", error);
     throw error;
   }
 };
