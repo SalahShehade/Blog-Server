@@ -12,15 +12,7 @@ const admin = require("../firebase");
 // Get reference to the storage bucket
 const bucket = admin.storage().bucket("hajziapp.firebasestorage.app");
 
-const storage = multer.diskStorage({
-  //the path to store the image and file name
-  destination: (req, file, cb) => {
-    cb(null, "./uploads"); //uploads is the folder that stores the img
-  },
-  filename: (req, file, cb) => {
-    cb(null, req.decoded.email + ".jpg"); //use email to make it unique
-  },
-});
+const storage = multer.memoryStorage(); // Switch to memory storage
 
 const fileFilter = (req, file, cb) => {
   if (file.mimetype == "image/jpeg" || file.mimetype == "image/png") {
