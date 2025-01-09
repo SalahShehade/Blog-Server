@@ -9,7 +9,7 @@ const serviceAccount = require(path.join(
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  storageBucket: "hajziapp.appspot.com", // Correct Firebase Storage bucket name
+  storageBucket: "hajziapp.firebasestorage.app", // Replace with your bucket name
 });
 
 // Export the admin instance
