@@ -28,7 +28,7 @@ const upload = multer({
   },
   //  fileFilter: fileFilter, // orginally any kind of file can be submitted like img,pdf,doc
 });
-const uploadImageToFirebase = async (file, destination) => {
+const uploadFileToFirebase = async (file, destination) => {
   try {
     const fileUpload = bucket.file(destination);
 

@@ -19,7 +19,7 @@ const upload = multer({
   },
 });
 
-const uploadImageToFirebase = async (file, destination) => {
+const uploadFileToFirebase = async (file, destination) => {
   try {
     const fileUpload = bucket.file(destination);
 
