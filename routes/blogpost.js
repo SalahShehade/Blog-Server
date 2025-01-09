@@ -488,6 +488,8 @@ router
         username: blogPost.username,
         lat: blogPost.lat,
         lng: blogPost.lng,
+        previewImage: blogPost.previewImage, // Added
+        coverImages: blogPost.coverImages, // Added
       });
     } catch (error) {
       console.error("Error fetching blog details:", error);
