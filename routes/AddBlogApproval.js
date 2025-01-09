@@ -175,7 +175,7 @@ router.get("/requests", async (req, res) => {
 });
 
 // Endpoint to fetch blog approval details by ID
-router.get("/:blogId", async (req, res) => {
+router.get("/details/:id", async (req, res) => {
   const { blogId } = req.params;
 
   try {
