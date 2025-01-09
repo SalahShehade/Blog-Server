@@ -8,7 +8,7 @@ const path = require("path");
 const admin = require("../firebase");
 
 // Get reference to the storage bucket
-const bucket = admin.storage().bucket();
+const bucket = admin.storage().bucket("hajziapp.firebasestorage.app");
 
 const storage = multer.diskStorage({
   // The path to store the image and file name

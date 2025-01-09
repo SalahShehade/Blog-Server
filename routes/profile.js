@@ -10,7 +10,7 @@ const { abort } = require("process");
 const admin = require("../firebase");
 
 // Get reference to the storage bucket
-const bucket = admin.storage().bucket();
+const bucket = admin.storage().bucket("hajziapp.firebasestorage.app");
 
 const storage = multer.diskStorage({
   //the path to store the image and file name
