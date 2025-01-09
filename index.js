@@ -40,7 +40,7 @@ const events = require("events");
 events.EventEmitter.defaultMaxListeners = 15; // Increase the limit to 15 or more as needed
 
 //app.use(cors({ origin: "http://localhost:57308" })); // Replace with your web app's URL
-app.use(cors({ origin: "*", method: "GET", maxAge: 3600 })); // Allow requests from any origin
+app.use(cors({ origin: "*" })); // Allow requests from any origin
 
 mongoose.connect(
   "mongodb+srv://Abdallah:12345@cluster0.njict.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0/myapp"
