@@ -6,31 +6,74 @@ const middleware = require("../middleware");
 const multer = require("multer");
 const path = require("path");
 const { abort } = require("process");
+const admin = require("firebase-admin");
 
-const storage = multer.diskStorage({
-  //the path to store the image and file name
-  destination: (req, file, cb) => {
-    cb(null, "./uploads"); //uploads is the folder that stores the img
-  },
-  filename: (req, file, cb) => {
-    cb(null, req.decoded.email + ".jpg"); //use email to make it unique
-  },
+const serviceAccount = require(path.join(
+  __dirname,
+  "../keys/hajziapp-firebase-adminsdk-oilsf-7b76365cd4.json"
+));
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: "hajziapp.firebasestorage.app", // Replace with your bucket name
 });
 
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype == "image/jpeg" || file.mimetype == "image/png") {
-    cb(null, true); //callback is true if jpeg or png
-  } else {
-    cb(null, false);
+// Get reference to the storage bucket
+const bucket = admin.storage().bucket();
+
+// const storage = multer.diskStorage({
+//   //the path to store the image and file name
+//   destination: (req, file, cb) => {
+//     cb(null, "./uploads"); //uploads is the folder that stores the img
+//   },
+//   filename: (req, file, cb) => {
+//     cb(null, req.decoded.email + ".jpg"); //use email to make it unique
+//   },
+// });
+
+// const fileFilter = (req, file, cb) => {
+//   if (file.mimetype == "image/jpeg" || file.mimetype == "image/png") {
+//     cb(null, true); //callback is true if jpeg or png
+//   } else {
+//     cb(null, false);
+//   }
+// };
+// const upload = multer({
+//   storage: storage,
+//   limits: {
+//     fileSize: 1024 * 1024 * 6, //6 MB
+//   },
+//   //  fileFilter: fileFilter, // orginally any kind of file can be submitted like img,pdf,doc
+// });
+const uploadFileToFirebase = async (file, destinationPath) => {
+  try {
+    const fileUpload = bucket.file(destinationPath);
+
+    // Create a stream to upload the file
+    const stream = fileUpload.createWriteStream({
+      metadata: {
+        contentType: file.mimetype, // Use the file's mimetype
+      },
+    });
+
+    stream.on("error", (err) => {
+      throw new Error("Error uploading to Firebase: " + err.message);
+    });
+
+    stream.on("finish", async () => {
+      // Make the file public
+      await fileUpload.makePublic();
+    });
+
+    stream.end(file.buffer);
+
+    // Return the public URL for the uploaded file
+    return `https://storage.googleapis.com/${bucket.name}/${destinationPath}`;
+  } catch (error) {
+    console.error("Error uploading file to Firebase:", error.message);
+    throw error;
   }
 };
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 1024 * 1024 * 6, //6 MB
-  },
-  //  fileFilter: fileFilter, // orginally any kind of file can be submitted like img,pdf,doc
-});
 
 router
   .route("/add/image")
@@ -40,9 +83,16 @@ router
     }
 
     try {
+      // Upload the file to Firebase Storage
+      const firebasePath = `profileImages/${
+        req.decoded.email
+      }-${Date.now()}${path.extname(req.file.originalname)}`;
+      const publicUrl = await uploadFileToFirebase(req.file, firebasePath);
+
+      // Update the user's profile in the database with the Firebase URL
       const profile = await Profile.findOneAndUpdate(
         { email: req.decoded.email },
-        { $set: { img: req.file.path } },
+        { $set: { img: publicUrl } },
         { new: true }
       );
 
@@ -55,7 +105,8 @@ router
         data: profile,
       });
     } catch (err) {
-      res.status(500).send(err);
+      console.error("Error uploading profile image:", err.message);
+      res.status(500).send(err.message);
     }
   });
 
@@ -93,6 +144,7 @@ router.route("/getDataByEmail").get(middleware.checkToken, async (req, res) => {
       return res.status(404).json({ msg: "Profile not found" });
     }
 
+    // The `img` field will contain the Firebase URL if it was updated
     res.status(200).json({ data: profile });
   } catch (error) {
     console.error("❌ Error fetching profile by email:", error.message);

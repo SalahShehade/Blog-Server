@@ -5,27 +5,71 @@ const middleware = require("../middleware");
 const multer = require("multer");
 const AddBlogApproval = require("../models/AddBlogApproval.model"); // Adjust the path as needed
 const path = require("path");
+const admin = require("firebase-admin");
 
-const storage = multer.diskStorage({
-  // The path to store the image and file name
-  destination: (req, file, cb) => {
-    cb(null, "./uploads"); // `uploads` is the folder that stores the images
-  },
-  filename: (req, file, cb) => {
-    // Use a unique filename by appending a timestamp
-    const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
-      file.originalname
-    )}`;
-    cb(null, uniqueName);
-  },
+const serviceAccount = require(path.join(
+  __dirname,
+  "../keys/hajziapp-firebase-adminsdk-oilsf-7b76365cd4.json"
+));
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: "hajziapp.firebasestorage.app", // Replace with your bucket name
 });
 
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 1024 * 1024 * 6, // 6 MB
-  },
-});
+// Get reference to the storage bucket
+const bucket = admin.storage().bucket();
+
+// const storage = multer.diskStorage({
+//   // The path to store the image and file name
+//   destination: (req, file, cb) => {
+//     cb(null, "./uploads"); // `uploads` is the folder that stores the images
+//   },
+//   filename: (req, file, cb) => {
+//     // Use a unique filename by appending a timestamp
+//     const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
+//       file.originalname
+//     )}`;
+//     cb(null, uniqueName);
+//   },
+// });
+
+// const upload = multer({
+//   storage: storage,
+//   limits: {
+//     fileSize: 1024 * 1024 * 6, // 6 MB
+//   },
+// });
+
+const uploadFileToFirebase = async (file, destinationPath) => {
+  try {
+    const fileUpload = bucket.file(destinationPath);
+
+    // Create a stream to upload the file
+    const stream = fileUpload.createWriteStream({
+      metadata: {
+        contentType: file.mimetype, // Use the file's mimetype
+      },
+    });
+
+    stream.on("error", (err) => {
+      throw new Error("Error uploading to Firebase: " + err.message);
+    });
+
+    stream.on("finish", async () => {
+      // Make the file public
+      await fileUpload.makePublic();
+    });
+
+    stream.end(file.buffer);
+
+    // Return the public URL for the uploaded file
+    return `https://storage.googleapis.com/${bucket.name}/${destinationPath}`;
+  } catch (error) {
+    console.error("Error uploading file to Firebase:", error.message);
+    throw error;
+  }
+};
 
 // //first add code
 router.route("/Add").post(middleware.checkToken, async (req, res) => {
@@ -71,7 +115,7 @@ router.route("/update/:id").patch(middleware.checkToken, async (req, res) => {
 
 router.patch(
   "/update/previewImage/:id",
-  upload.single("img"),
+  upload.single("img"), // Multer middleware for handling file uploads
   async (req, res) => {
     try {
       const blogPost = await BlogPost.findById(req.params.id);
@@ -79,11 +123,21 @@ router.patch(
         return res.status(404).json({ error: "Blog not found" });
       }
 
-      blogPost.previewImage = req.file.path;
+      // Upload the image to Firebase
+      const firebasePath = `previewImages/${req.params.id}-${Date.now()}-${
+        req.file.originalname
+      }`;
+      const publicUrl = await uploadFileToFirebase(req.file, firebasePath);
+
+      // Update the blog post with the Firebase Storage URL
+      blogPost.previewImage = publicUrl;
       await blogPost.save();
 
-      res.status(200).json({ message: "Preview image updated successfully" });
+      res
+        .status(200)
+        .json({ message: "Preview image updated successfully", publicUrl });
     } catch (err) {
+      console.error("Error uploading preview image:", err.message);
       res.status(500).json({ error: err.message });
     }
   }
@@ -93,20 +147,30 @@ router.delete("/remove/coverImage/:id", async (req, res) => {
   try {
     const blogPost = await BlogPost.findById(req.params.id);
     if (!blogPost) {
-      return res.status(404).json({ error: "Blog not found" });
+      return res.status(404).json({ error: "Blog post not found" });
     }
 
-    const { imageUrl } = req.body; // Ensure the request body contains imageUrl
+    const { imageUrl } = req.body;
     if (!imageUrl) {
       return res.status(400).json({ error: "Image URL is required" });
     }
 
+    // Extract the file name from the URL
+    const fileName = imageUrl.split("/").pop();
+    const file = bucket.file(`coverImages/${fileName}`);
+
+    // Delete the file from Firebase Storage
+    await file.delete();
+
+    // Remove the image URL from the database
     blogPost.coverImages = blogPost.coverImages.filter(
       (img) => img !== imageUrl
     );
     await blogPost.save();
+
     res.status(200).json({ message: "Cover image removed successfully" });
   } catch (err) {
+    console.error("Error removing cover image:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -218,44 +282,46 @@ router.delete("/remove/coverImage/:id", async (req, res) => {
 //       res.status(500).json({ error: err.message });
 //     }
 //   });
-router
-  .route("/add/coverImages/:id")
-  .patch(middleware.checkToken, upload.array("img", 5), async (req, res) => {
+router.patch(
+  "/add/coverImages/:id",
+  upload.array("img", 5), // Multer middleware to handle multiple file uploads
+  async (req, res) => {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: "No files uploaded" });
     }
 
     try {
-      // Get all file paths
-      const imagePaths = req.files.map((file) => file.path);
-
-      // Fetch the blog post
       const blogPost = await BlogPost.findById(req.params.id);
-
       if (!blogPost) {
-        return res.status(404).json({ message: "Blog post not found" });
+        return res.status(404).json({ error: "Blog post not found" });
       }
 
-      // Set the previewImage if not already set
-      if (!blogPost.previewImage || blogPost.previewImage === "") {
-        blogPost.previewImage = imagePaths[0]; // Set the first uploaded image as the previewImage
-      }
+      // Upload each file to Firebase and collect the URLs
+      const imageUrls = await Promise.all(
+        req.files.map(async (file) => {
+          const firebasePath = `coverImages/${req.params.id}-${Date.now()}-${
+            file.originalname
+          }`;
+          return await uploadFileToFirebase(file, firebasePath);
+        })
+      );
 
-      // Add the new images to the coverImages array
-      blogPost.coverImages.push(...imagePaths);
+      // Add the new image URLs to the blog post
+      blogPost.coverImages.push(...imageUrls);
 
       // Save the updated blog post
       await blogPost.save();
 
       res.status(200).json({
-        message: "Images uploaded successfully",
+        message: "Cover images uploaded successfully",
         data: blogPost,
       });
     } catch (err) {
-      console.error(err);
+      console.error("Error uploading cover images:", err.message);
       res.status(500).json({ error: err.message });
     }
-  });
+  }
+);
 
 router.route("/getOwnBlog").get(middleware.checkToken, async (req, res) => {
   const response = await BlogPost.find({

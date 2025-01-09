@@ -5,25 +5,74 @@ const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 
-const storage = multer.diskStorage({
-  // The path to store the image and file name
-  destination: (req, file, cb) => {
-    cb(null, "./uploads"); // `uploads` is the folder that stores the images
-  },
-  filename: (req, file, cb) => {
-    // Use a unique filename by appending a timestamp
-    const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
-      file.originalname
-    )}`;
-    cb(null, uniqueName);
-  },
+const admin = require("firebase-admin");
+
+// Initialize Firebase Admin
+const serviceAccount = require(path.join(
+  __dirname,
+  "../keys/hajziapp-firebase-adminsdk-oilsf-7b76365cd4.json"
+));
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: "hajziapp.firebasestorage.app", // Replace with your bucket name
 });
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 1024 * 1024 * 6, // 6 MB
-  },
-});
+
+// Get reference to the storage bucket
+const bucket = admin.storage().bucket();
+
+// const storage = multer.diskStorage({
+//   // The path to store the image and file name
+//   destination: (req, file, cb) => {
+//     cb(null, "./uploads"); // `uploads` is the folder that stores the images
+//   },
+//   filename: (req, file, cb) => {
+//     // Use a unique filename by appending a timestamp
+//     const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
+//       file.originalname
+//     )}`;
+//     cb(null, uniqueName);
+//   },
+// });
+// const upload = multer({
+//   storage: storage,
+//   limits: {
+//     fileSize: 1024 * 1024 * 6, // 6 MB
+//   },
+// });
+
+const uploadImageToFirebase = async (file, destination) => {
+  try {
+    const fileUpload = bucket.file(destination);
+
+    // Create a stream to upload file
+    const stream = fileUpload.createWriteStream({
+      metadata: {
+        contentType: file.mimetype, // Set the content type
+      },
+    });
+
+    // Handle stream events
+    stream.on("error", (err) => {
+      throw new Error("Error uploading to Firebase: " + err.message);
+    });
+
+    stream.on("finish", async () => {
+      // Make the file public
+      await fileUpload.makePublic();
+    });
+
+    // Pipe file to Firebase Storage
+    stream.end(file.buffer);
+
+    // Return public URL
+    return `https://storage.googleapis.com/${bucket.name}/${destination}`;
+  } catch (error) {
+    console.error("Error uploading image to Firebase:", error);
+    throw error;
+  }
+};
+
 // In your addApproval route (AddBlogApproval routes)
 router.post("/addApproval", async (req, res) => {
   try {
@@ -75,7 +124,14 @@ router.patch("/previewImage/:id", upload.single("img"), async (req, res) => {
       return res.status(404).json({ error: "Blog not found" });
     }
 
-    blog.previewImage = req.file.path;
+    // Upload image to Firebase Storage
+    const firebasePath = `previewImages/${
+      req.params.id
+    }-${Date.now()}${path.extname(req.file.originalname)}`;
+    const publicUrl = await uploadImageToFirebase(req.file, firebasePath);
+
+    // Update the blog with the Firebase image URL
+    blog.previewImage = publicUrl;
     await blog.save();
 
     return res
@@ -95,12 +151,21 @@ router.patch("/coverImages/:id", upload.array("img", 5), async (req, res) => {
       return res.status(404).json({ error: "Blog not found" });
     }
 
-    const imagePaths = req.files.map((file) => file.path);
+    // Upload all files to Firebase Storage
+    const imagePaths = await Promise.all(
+      req.files.map(async (file) => {
+        const firebasePath = `coverImages/${req.params.id}-${Date.now()}-${
+          file.originalname
+        }`;
+        return await uploadImageToFirebase(file, firebasePath);
+      })
+    );
+
+    // Add the Firebase URLs to the blog's cover images
     blog.coverImages.push(...imagePaths);
 
     await blog.save();
 
-    // Ensure only one response is sent
     return res
       .status(200)
       .json({ message: "Cover images uploaded successfully", data: blog });
