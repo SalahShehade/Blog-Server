@@ -10,25 +10,20 @@ const admin = require("../firebase");
 // Get reference to the storage bucket
 const bucket = admin.storage().bucket("hajziapp.firebasestorage.app");
 
-const storage = multer.diskStorage({
-  // The path to store the image and file name
-  destination: (req, file, cb) => {
-    cb(null, "./uploads"); // `uploads` is the folder that stores the images
-  },
-  filename: (req, file, cb) => {
-    // Use a unique filename by appending a timestamp
-    const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
-      file.originalname
-    )}`;
-    cb(null, uniqueName);
-  },
-});
+const storage = multer.memoryStorage(); // Switch to memory storage
 const upload = multer({
   storage: storage,
   limits: {
     fileSize: 1024 * 1024 * 6, // 6 MB
   },
 });
+
+// const upload = multer({
+//   storage: storage,
+//   limits: {
+//     fileSize: 1024 * 1024 * 6, // 6 MB
+//   },
+// });
 
 const uploadImageToFirebase = async (file, destination) => {
   try {
