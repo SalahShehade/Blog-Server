@@ -6,45 +6,36 @@ const middleware = require("../middleware");
 const multer = require("multer");
 const path = require("path");
 const { abort } = require("process");
-const admin = require("firebase-admin");
 
-const serviceAccount = require(path.join(
-  __dirname,
-  "../keys/hajziapp-firebase-adminsdk-oilsf-7b76365cd4.json"
-));
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: "hajziapp.firebasestorage.app", // Replace with your bucket name
-});
+const admin = require("../firebase");
 
 // Get reference to the storage bucket
 const bucket = admin.storage().bucket();
 
-// const storage = multer.diskStorage({
-//   //the path to store the image and file name
-//   destination: (req, file, cb) => {
-//     cb(null, "./uploads"); //uploads is the folder that stores the img
-//   },
-//   filename: (req, file, cb) => {
-//     cb(null, req.decoded.email + ".jpg"); //use email to make it unique
-//   },
-// });
+const storage = multer.diskStorage({
+  //the path to store the image and file name
+  destination: (req, file, cb) => {
+    cb(null, "./uploads"); //uploads is the folder that stores the img
+  },
+  filename: (req, file, cb) => {
+    cb(null, req.decoded.email + ".jpg"); //use email to make it unique
+  },
+});
 
-// const fileFilter = (req, file, cb) => {
-//   if (file.mimetype == "image/jpeg" || file.mimetype == "image/png") {
-//     cb(null, true); //callback is true if jpeg or png
-//   } else {
-//     cb(null, false);
-//   }
-// };
-// const upload = multer({
-//   storage: storage,
-//   limits: {
-//     fileSize: 1024 * 1024 * 6, //6 MB
-//   },
-//   //  fileFilter: fileFilter, // orginally any kind of file can be submitted like img,pdf,doc
-// });
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype == "image/jpeg" || file.mimetype == "image/png") {
+    cb(null, true); //callback is true if jpeg or png
+  } else {
+    cb(null, false);
+  }
+};
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 6, //6 MB
+  },
+  //  fileFilter: fileFilter, // orginally any kind of file can be submitted like img,pdf,doc
+});
 const uploadFileToFirebase = async (file, destinationPath) => {
   try {
     const fileUpload = bucket.file(destinationPath);

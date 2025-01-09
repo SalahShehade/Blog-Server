@@ -1,6 +1,7 @@
 const express = require("express");
-const admin = require("firebase-admin");
+//const admin = require("firebase-admin");
 const router = express.Router();
+const admin = require("../firebase");
 
 const Notification = require("../models/notifications.model");
 // Function to fetch admin tokens from your database (replace this with your actual logic)
@@ -12,11 +13,11 @@ async function getAdminTokens() {
 }
 
 // Initialize Firebase Admin
-const serviceAccount = require("../keys/hajziapp-firebase-adminsdk-oilsf-7b76365cd4.json");
+// const serviceAccount = require("../keys/hajziapp-firebase-adminsdk-oilsf-7b76365cd4.json");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+// });
 
 // Define the notifyAdmins route
 router.post("/notifyAdmins/:email", async (req, res) => {

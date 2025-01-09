@@ -5,41 +5,31 @@ const middleware = require("../middleware");
 const multer = require("multer");
 const AddBlogApproval = require("../models/AddBlogApproval.model"); // Adjust the path as needed
 const path = require("path");
-const admin = require("firebase-admin");
-
-const serviceAccount = require(path.join(
-  __dirname,
-  "../keys/hajziapp-firebase-adminsdk-oilsf-7b76365cd4.json"
-));
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: "hajziapp.firebasestorage.app", // Replace with your bucket name
-});
+const admin = require("../firebase");
 
 // Get reference to the storage bucket
 const bucket = admin.storage().bucket();
 
-// const storage = multer.diskStorage({
-//   // The path to store the image and file name
-//   destination: (req, file, cb) => {
-//     cb(null, "./uploads"); // `uploads` is the folder that stores the images
-//   },
-//   filename: (req, file, cb) => {
-//     // Use a unique filename by appending a timestamp
-//     const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
-//       file.originalname
-//     )}`;
-//     cb(null, uniqueName);
-//   },
-// });
+const storage = multer.diskStorage({
+  // The path to store the image and file name
+  destination: (req, file, cb) => {
+    cb(null, "./uploads"); // `uploads` is the folder that stores the images
+  },
+  filename: (req, file, cb) => {
+    // Use a unique filename by appending a timestamp
+    const uniqueName = `${req.params.id}-${Date.now()}${path.extname(
+      file.originalname
+    )}`;
+    cb(null, uniqueName);
+  },
+});
 
-// const upload = multer({
-//   storage: storage,
-//   limits: {
-//     fileSize: 1024 * 1024 * 6, // 6 MB
-//   },
-// });
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 6, // 6 MB
+  },
+});
 
 const uploadFileToFirebase = async (file, destinationPath) => {
   try {
