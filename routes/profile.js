@@ -143,24 +143,19 @@ router.route("/getDataByEmail").get(middleware.checkToken, async (req, res) => {
 });
 
 router.route("/checkProfile").get(middleware.checkToken, async (req, res) => {
-  // to check wether the usrname exists or not
   try {
-    const result = await Profile.findOne({ email: req.decoded.email }); //since email is provided as unique
+    const result = await Profile.findOne({ email: req.decoded.email });
 
     if (!result) {
       return res.status(404).json({ msg: "Profile not found" });
     }
-    if (result != null) {
-      return res.json({
-        Status: true,
-        email: req.decoded.email, // this part is added newly for drawer username and profile picture
-      });
-    } else {
-      return res.json({
-        Status: false,
-        email: req.decoded.email,
-      });
-    }
+
+    // Ensure the 'img' field is included in the response
+    return res.json({
+      Status: true,
+      email: req.decoded.email,
+      img: result.img, // Include the image URL
+    });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
