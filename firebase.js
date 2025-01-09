@@ -1,9 +1,6 @@
 const admin = require("firebase-admin");
 const path = require("path");
-const cors = require("cors");
-const express = require("express");
-const app = express();
-app.use(cors());
+
 // Initialize Firebase Admin
 const serviceAccount = require(path.join(
   __dirname,
