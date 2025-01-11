@@ -98,7 +98,7 @@ router
     }
   });
 
-router.route("/add").post(middleware.checkToken, (req, res) => {
+router.route("/add").post(middleware.checkToken, async (req, res) => {
   console.log(req.body); // Check if req.body contains the expected data
   console.log("Decoded email:", req.decoded.email);
   const profile = Profile({
@@ -109,6 +109,13 @@ router.route("/add").post(middleware.checkToken, (req, res) => {
     titleline: req.body.titleline,
     about: req.body.about,
   });
+
+  // Update profileFlag in User model
+  await User.findOneAndUpdate(
+    { email },
+    { $set: { profileFlag: 1 } },
+    { new: true }
+  );
 
   profile
     .save()

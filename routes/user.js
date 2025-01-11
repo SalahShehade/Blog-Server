@@ -403,6 +403,7 @@ router.route("/login").post(async (req, res) => {
         {
           email: result.email,
           role: result.role, // Include the user's role
+          profileFlag: result.profileFlag, // Include the profileFlag
         },
         config.key,
         {
@@ -413,6 +414,7 @@ router.route("/login").post(async (req, res) => {
       return res.json({
         token: token,
         role: result.role,
+        profileFlag: result.profileFlag, // Send profileFlag to frontend
         msg: "Login successful",
       });
     } else {

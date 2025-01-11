@@ -33,6 +33,11 @@ const User = Schema({
     type: Boolean,
     default: false, // By default, users are not banned
   },
+  profileFlag: {
+    // New field to track profile creation
+    type: Number,
+    default: 0, // 0 = Not created, 1 = Created
+  },
 });
 
 module.exports = mongoose.model("User", User);
