@@ -10,6 +10,89 @@ const router = express.Router();
  * 🟢 Get all chats for a user
  * This route returns all chats where the current user's email is in the `users` array.
  */
+
+
+// chat.js
+
+const multer = require("multer");
+const upload = multer({ dest: "uploads/audio/" });
+
+// POST /chat/send-audio
+router.post(
+  "/send-audio",
+  middleware.checkToken,
+  upload.single("audioFile"), // "audioFile" is the field name from Flutter
+  async (req, res) => {
+    try {
+      const { chatId, receiverEmail } = req.body;
+      const senderEmail = req.decoded.email;
+
+      // 1) Make sure file is present
+      if (!req.file) {
+        return res.status(400).json({ msg: "No audio file uploaded." });
+      }
+
+      // 2) Build file URL
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/audio/${req.file.filename}`;
+
+      // 3) Create new message in Mongo
+      const message = new Message({
+        chatId,
+        senderEmail,
+        receiverEmail,
+        content: fileUrl, // We'll store the audio URL in "content"
+        timestamp: Date.now(),
+      });
+      await message.save();
+
+      // 4) Update chat with the new message
+      await Chat.findByIdAndUpdate(chatId, {
+        $push: { messages: message._id },
+        lastMessage: "[Audio Message]", // Optional
+        lastMessageTime: Date.now(),
+      });
+
+      // 5) Emit real-time event via Socket.IO
+      const io = req.app.get("io");
+      if (io) {
+        const enrichedMessage = {
+          _id: message._id,
+          chatId,
+          senderEmail,
+          receiverEmail,
+          content: fileUrl,  // The audio URL
+          timestamp: message.timestamp,
+        };
+        io.to(chatId).emit("receive_message_individual", enrichedMessage);
+      }
+
+      // 6) Send response to client
+      return res.status(201).json({
+        msg: "Audio message sent successfully",
+        data: {
+          chatId,
+          content: fileUrl,
+        },
+      });
+    } catch (error) {
+      console.error("❌ Error sending audio message:", error);
+      res.status(500).json({ msg: "Server error", error: error.message });
+    }
+  }
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
 router.get("/user-chats", middleware.checkToken, async (req, res) => {
   try {
     const userEmail = req.decoded.email; // Extract user email from the token
