@@ -99,35 +99,38 @@ router
   });
 
 router.route("/add").post(middleware.checkToken, async (req, res) => {
-  console.log(req.body); // Check if req.body contains the expected data
-  console.log("Decoded email:", req.decoded.email);
+  try {
+    console.log("Decoded email:", req.decoded.email);
 
-  const { email } = req.decoded; // or use req.decoded.email directly
+    const { email } = req.decoded; // or use req.decoded.email directly
 
-  const profile = Profile({
-    email: req.decoded.email,
-    name: req.body.name,
-    profession: req.body.profession,
-    DOB: req.body.DOB,
-    titleline: req.body.titleline,
-    about: req.body.about,
-  });
-
-  // 2) Update profileFlag in User model
-  await User.findOneAndUpdate(
-    { email },
-    { $set: { profileFlag: 1 } },
-    { new: true }
-  );
-  profile
-    .save()
-    .then(() => res.json({ msg: "Profile successfully stored..." }))
-    .catch((err) => {
-      console.error("Database save error:", err.message);
-      return res.status(400).json({ error: err.message });
+    // 1) Create a new profile document
+    const profile = new Profile({
+      email: req.decoded.email,
+      name: req.body.name,
+      profession: req.body.profession,
+      DOB: req.body.DOB,
+      titleline: req.body.titleline,
+      about: req.body.about,
     });
-});
 
+    // 2) Update profileFlag in User model
+    await User.findOneAndUpdate(
+      { email },
+      { $set: { profileFlag: 1 } },
+      { new: true }
+    );
+
+    // 3) Save the new profile
+    await profile.save();
+
+    // 4) Return success response
+    return res.status(201).json({ msg: "Profile successfully stored..." });
+  } catch (err) {
+    console.error("Database save error:", err.message);
+    return res.status(400).json({ error: err.message });
+  }
+});
 // Route to get profile data by email
 router.route("/getDataByEmail").get(middleware.checkToken, async (req, res) => {
   const { email } = req.query;
