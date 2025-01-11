@@ -6,7 +6,7 @@ const middleware = require("../middleware");
 const multer = require("multer");
 const path = require("path");
 const { abort } = require("process");
-
+const User = require("../models/user.model"); // Make sure this is correct!
 const admin = require("../firebase");
 
 // Get reference to the storage bucket
@@ -110,13 +110,12 @@ router.route("/add").post(middleware.checkToken, async (req, res) => {
     about: req.body.about,
   });
 
-  // Update profileFlag in User model
+  // 2) Update profileFlag in User model
   await User.findOneAndUpdate(
     { email },
     { $set: { profileFlag: 1 } },
     { new: true }
   );
-
   profile
     .save()
     .then(() => res.json({ msg: "Profile successfully stored..." }))
