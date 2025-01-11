@@ -101,6 +101,9 @@ router
 router.route("/add").post(middleware.checkToken, async (req, res) => {
   console.log(req.body); // Check if req.body contains the expected data
   console.log("Decoded email:", req.decoded.email);
+
+  const { email } = req.decoded; // or use req.decoded.email directly
+
   const profile = Profile({
     email: req.decoded.email,
     name: req.body.name,
