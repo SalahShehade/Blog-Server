@@ -20,7 +20,7 @@ const app = express(); //
 // });
 
 //new
-//hello
+//
 
 app.use((req, res, next) => {
   if (req.headers["x-forwarded-proto"] !== "https") {
