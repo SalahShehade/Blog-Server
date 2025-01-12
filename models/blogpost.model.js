@@ -12,6 +12,21 @@ const BlogPost = Schema({
     type: [String], // This array stores the usernames of users who liked the post
     default: [],
   },
+
+  // Keep track of which users (by email) have rated this blog:
+  ratedBy: {
+    type: [String],
+    default: [],
+  },
+
+  ratingSum: {
+    type: Number,
+    default: 0,
+  },
+  numberOfRatings: {
+    type: Number,
+    default: 0,
+  },
   // coverImage: {
   //   type: String,
   //   default: "",

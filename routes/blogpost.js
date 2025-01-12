@@ -126,6 +126,94 @@ router.patch(
   }
 );
 
+router.patch("/rate/:id", middleware.checkToken, async (req, res) => {
+  try {
+    const { email } = req.decoded; // current user’s email from the JWT
+    const { rating } = req.body; // rating sent from the client (1.0 to 5.0)
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res
+        .status(400)
+        .json({ Status: false, message: "Rating must be between 1 and 5" });
+    }
+
+    const blogPost = await BlogPost.findById(req.params.id);
+    if (!blogPost) {
+      return res.status(404).json({ Status: false, message: "Blog not found" });
+    }
+
+    // Check if the user already rated this blog
+    if (blogPost.ratedBy.includes(email)) {
+      return res.status(403).json({
+        Status: false,
+        message: "You have already rated this blog",
+      });
+    }
+
+    // Update fields
+    blogPost.ratingSum += rating;
+    blogPost.numberOfRatings += 1;
+    blogPost.ratedBy.push(email);
+
+    await blogPost.save();
+
+    // Return updated average and count
+    const averageRating =
+      blogPost.numberOfRatings === 0
+        ? 0
+        : blogPost.ratingSum / blogPost.numberOfRatings;
+
+    return res.json({
+      Status: true,
+      message: "Blog rated successfully",
+      data: {
+        averageRating,
+        numberOfRatings: blogPost.numberOfRatings,
+      },
+    });
+  } catch (error) {
+    console.error("Error rating blog:", error);
+    return res
+      .status(500)
+      .json({ Status: false, message: "Internal server error" });
+  }
+});
+
+/**
+ * Get the rating info for a blog post
+ * @route GET /blogpost/ratinginfo/:id
+ */
+router.get("/ratinginfo/:id", middleware.checkToken, async (req, res) => {
+  try {
+    const { email } = req.decoded;
+    const blogPost = await BlogPost.findById(req.params.id);
+
+    if (!blogPost) {
+      return res.status(404).json({ Status: false, message: "Blog not found" });
+    }
+
+    const averageRating =
+      blogPost.numberOfRatings === 0
+        ? 0
+        : blogPost.ratingSum / blogPost.numberOfRatings;
+
+    // Check if current user has rated
+    const userHasRated = blogPost.ratedBy.includes(email);
+
+    return res.json({
+      Status: true,
+      averageRating,
+      numberOfRatings: blogPost.numberOfRatings,
+      userHasRated,
+    });
+  } catch (error) {
+    console.error("Error fetching rating info:", error);
+    return res
+      .status(500)
+      .json({ Status: false, message: "Internal server error" });
+  }
+});
+
 router.delete("/remove/coverImage/:id", async (req, res) => {
   try {
     const blogPost = await BlogPost.findById(req.params.id);
