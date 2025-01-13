@@ -11,8 +11,6 @@ const appointmentSchema = new mongoose.Schema({
     enum: ["booked", "available"],
     default: "available", // Available slots are "available" by default
   },
-  // NEW FIELD: Store a specific date (YYYY-MM-DD for example)
-  date: { type: String, required: true },
 });
 
 module.exports = mongoose.model("Appointment", appointmentSchema);
