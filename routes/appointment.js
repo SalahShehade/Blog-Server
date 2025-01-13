@@ -170,12 +170,17 @@ router.get("/getAppointments/:blogId", async (req, res) => {
 // Add new available time slot
 router.post("/addAvailableTime", async (req, res) => {
   try {
-    const { time, blogId } = req.body;
+    const { time, blogId, date } = req.body;
+
+    if (!blogId || !time || !date) {
+      return res.status(400).json({ message: "Missing required fields." });
+    }
 
     const newAppointment = new Appointment({
       time,
       blogId,
       userName: "Available Slot",
+      date, // This must be a valid non-null string, e.g. "2025-01-01"
       duration: 30, // Default duration for available slots
       status: "available",
     });
