@@ -91,6 +91,53 @@ router.patch("/updateUser/:blogId/:time", async (req, res) => {
     res.status(500).json({ message: "Failed to update user email.", error });
   }
 });
+
+// PATCH /appointment/updateSlot/:blogId/:oldTime
+router.patch("/updateSlot/:blogId/:oldTime", async (req, res) => {
+  const { blogId, oldTime } = req.params;
+  const { newTime, newDuration } = req.body;
+
+  try {
+    // Check if newTime is a valid HH:mm string or empty
+    // You might also validate newDuration
+
+    // Find the appointment by oldTime
+    const appointment = await Appointment.findOne({ blogId, time: oldTime });
+    if (!appointment) {
+      return res.status(404).json({ message: "Time slot not found." });
+    }
+
+    // Check if there's another appointment with the same newTime
+    // to avoid duplicates
+    const existingAppointment = await Appointment.findOne({
+      blogId,
+      time: newTime,
+    });
+
+    if (existingAppointment && existingAppointment.time !== oldTime) {
+      return res
+        .status(400)
+        .json({ message: "That new time is already taken." });
+    }
+
+    // Update the slot
+    appointment.time = newTime;
+    appointment.duration = newDuration ?? appointment.duration;
+    // Optionally adjust the status if needed
+    // appointment.status = "booked" or "available"
+
+    await appointment.save();
+
+    return res.status(200).json({
+      message: "Slot updated successfully!",
+      data: appointment,
+    });
+  } catch (error) {
+    console.error("Error updating slot:", error);
+    res.status(500).json({ message: "Failed to update slot.", error });
+  }
+});
+
 router.post("/book", async (req, res) => {
   try {
     const { time, blogId, userName, duration } = req.body;
