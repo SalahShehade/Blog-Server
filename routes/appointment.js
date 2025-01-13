@@ -93,9 +93,9 @@ router.patch("/updateUser/:blogId/:time", async (req, res) => {
 });
 router.post("/book", async (req, res) => {
   try {
-    const { time, blogId, userName, duration } = req.body;
+    const { time, blogId, userName, duration, date } = req.body;
 
-    if (!time || !blogId || !userName) {
+    if (!time || !blogId || !userName || !date) {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
@@ -103,7 +103,7 @@ router.post("/book", async (req, res) => {
     const formattedTime = time.slice(0, 5); // Take only HH:mm
 
     const appointment = await Appointment.findOneAndUpdate(
-      { blogId, time: formattedTime, status: "available" },
+      { blogId, time: formattedTime, date, status: "available" },
       {
         $set: {
           userName: userName,
@@ -137,6 +137,7 @@ router.post("/addAvailableTime", async (req, res) => {
       blogId: blogId,
       userName: "Available Slot",
       time: time,
+      date: date, // YYYY-MM-DD
       duration: 30,
     });
 
@@ -156,6 +157,7 @@ router.get("/getAppointments/:blogId", async (req, res) => {
     const formattedAppointments = appointments.map((appointment) => ({
       userName: appointment.userName || "Available Slot",
       time: appointment.time,
+      date: appointment.date,
       duration: appointment.duration || 30, // Default duration
       status: appointment.status || "available", // If status not set, mark it as available
     }));
