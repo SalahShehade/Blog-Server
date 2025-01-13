@@ -175,6 +175,40 @@ router.post("/book", async (req, res) => {
   }
 });
 
+// POST /appointment/addAvailableSlot
+router.post("/addAvailableSlot", async (req, res) => {
+  try {
+    // We expect "blogId", "date" (ISO string or valid date), and "duration"
+    // from the client side
+    const { blogId, date, duration } = req.body;
+
+    // 1) Convert date to actual JS Date object
+    const appointmentDate = new Date(date);
+    if (isNaN(appointmentDate)) {
+      return res
+        .status(400)
+        .json({ message: "Invalid 'date' field provided." });
+    }
+
+    // 2) Create the appointment
+    const newAppointment = new Appointment({
+      blogId,
+      date: appointmentDate,
+      duration: duration || 30,
+      status: "available",
+    });
+
+    await newAppointment.save();
+    return res.status(200).json({
+      message: "Available slot created successfully!",
+      data: newAppointment,
+    });
+  } catch (error) {
+    console.error("Error adding slot:", error);
+    return res.status(500).json({ message: "Failed to add slot.", error });
+  }
+});
+
 // Add a new available time slot
 router.post("/addAvailableTime", async (req, res) => {
   const { blogId, time } = req.body;
