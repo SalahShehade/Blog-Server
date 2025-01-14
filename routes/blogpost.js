@@ -179,6 +179,20 @@ router.patch("/rate/:id", middleware.checkToken, async (req, res) => {
   }
 });
 
+router.get("/countUserShops", middleware.checkToken, async (req, res) => {
+  try {
+    // We get the user’s email from the decoded token.
+    const { email } = req.decoded;
+    // Count how many blogposts are associated with this user
+    const shopCount = await BlogPost.countDocuments({ email });
+
+    return res.status(200).json({ shopCount });
+  } catch (error) {
+    console.error("Error counting user shops:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 /**
  * Get the rating info for a blog post
  * @route GET /blogpost/ratinginfo/:id
