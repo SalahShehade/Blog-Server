@@ -384,12 +384,12 @@ router.patch("/delete-message", middleware.checkToken, async (req, res) => {
         .json({ msg: "Unauthorized to delete this message." });
     }
 
-    // Update the message content
-    message.content = null;
+    // Update the message content to an empty string
+    message.content = "";
     await message.save();
 
     // Emit the update to all clients in the chat room
-    const io = req.app.get("io"); // Ensure you've set io in your app
+    const io = req.app.get("io");
     if (io) {
       io.to(message.chatId.toString()).emit("update_message", {
         _id: message._id,
@@ -400,9 +400,7 @@ router.patch("/delete-message", middleware.checkToken, async (req, res) => {
     res.status(200).json({ msg: "Message deleted successfully." });
   } catch (error) {
     console.error("❌ Error deleting message:", error.message);
-    res
-      .status(500)
-      .json({ msg: "Internal server error.", error: error.message });
+    res.status(500).json({ msg: "Internal server error.", error: error.message });
   }
 });
 
