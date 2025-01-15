@@ -462,6 +462,28 @@ router.route("/register").post(async (req, res) => {
   }
 });
 
+router.route("/verifyToFalse/:email").post(async (req, res) => {
+  try {
+    const email = req.params.email;
+    const result = await User.findOneAndUpdate(
+      { email },
+      { $set: { verified: false } },
+      { new: true }
+    );
+
+    if (!result) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    return res.status(200).json({
+      msg: "User verification has been set to false",
+      user: result,
+    });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+});
+
 router.route("/update/:email").patch(async (req, res) => {
   try {
     // Find the user by email and update both the password and verified fields
@@ -488,28 +510,6 @@ router.route("/update/:email").patch(async (req, res) => {
     return res.json(msg);
   } catch (err) {
     // Handle any errors
-    return res.status(500).json({ msg: err.message });
-  }
-});
-
-router.route("/verifyToFalse/:email").post(async (req, res) => {
-  try {
-    const email = req.params.email;
-    const result = await User.findOneAndUpdate(
-      { email },
-      { $set: { verified: false } },
-      { new: true }
-    );
-
-    if (!result) {
-      return res.status(404).json({ msg: "User not found" });
-    }
-
-    return res.status(200).json({
-      msg: "User verification has been set to false",
-      user: result,
-    });
-  } catch (err) {
     return res.status(500).json({ msg: err.message });
   }
 });
