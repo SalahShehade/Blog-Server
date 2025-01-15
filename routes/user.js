@@ -449,6 +449,7 @@ router.route("/register").post(async (req, res) => {
       username: newUser.username,
       email: newUser.email,
       role: newUser.role,
+      verified: false, // ⬅️ Ensure this is false on registration
     };
 
     const token = jwt.sign(payload, config.key, { expiresIn: "1h" }); // Token valid for 1 hour
