@@ -385,7 +385,7 @@ router.patch("/delete-message", middleware.checkToken, async (req, res) => {
     }
 
     // Update the message content
-    message.content = "";
+    message.content = null;
     await message.save();
 
     // Emit the update to all clients in the chat room
