@@ -11,11 +11,65 @@ const router = express.Router();
  * This route returns all chats where the current user's email is in the `users` array.
  */
 
-
 // chat.js
 
 const multer = require("multer");
-const upload = multer({ dest: "uploads/audio/" });
+const admin = require("../firebase");
+
+// Get reference to the storage bucket
+const bucket = admin.storage().bucket("hajziapp.firebasestorage.app");
+
+const storage = multer.memoryStorage(); // Switch to memory storage
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype == "image/jpeg" || file.mimetype == "image/png") {
+    cb(null, true); //callback is true if jpeg or png
+  } else {
+    cb(null, false);
+  }
+};
+const upload = multer({
+  dest: "uploads/audio/",
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 6, //6 MB
+  },
+  //  fileFilter: fileFilter, // orginally any kind of file can be submitted like img,pdf,doc
+});
+const uploadFileToFirebase = async (file, destination) => {
+  try {
+    const fileUpload = bucket.file(destination);
+
+    const stream = fileUpload.createWriteStream({
+      metadata: {
+        contentType: file.mimetype,
+      },
+    });
+
+    return new Promise((resolve, reject) => {
+      stream.on("error", (err) => {
+        reject(new Error("Error uploading to Firebase: " + err.message));
+      });
+
+      stream.on("finish", async () => {
+        try {
+          await fileUpload.makePublic();
+          console.log(`File ${destination} is now public.`);
+          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${destination}`;
+          resolve(publicUrl);
+        } catch (err) {
+          console.error(`Failed to make file public: ${err}`);
+          reject(new Error("Error making file public: " + err.message));
+        }
+      });
+
+      stream.end(file.buffer);
+    });
+  } catch (error) {
+    console.error("Error uploading image to Firebase:", error);
+    throw error;
+  }
+};
 
 // POST /chat/send-audio
 router.post(
@@ -33,14 +87,20 @@ router.post(
       }
 
       // 2) Build file URL
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/audio/${req.file.filename}`;
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/audio/${
+        req.file.filename
+      }`;
+
+      // 3) Upload to Firebase
+      const publicUrl = await uploadFileToFirebase(req.file, destination);
+      console.log("✅ Audio uploaded to Firebase. URL:", publicUrl);
 
       // 3) Create new message in Mongo
       const message = new Message({
         chatId,
         senderEmail,
         receiverEmail,
-        content: fileUrl, // We'll store the audio URL in "content"
+        content: publicUrl, // We'll store the audio URL in "content"
         timestamp: Date.now(),
       });
       await message.save();
@@ -60,7 +120,7 @@ router.post(
           chatId,
           senderEmail,
           receiverEmail,
-          content: fileUrl,  // The audio URL
+          content: publicUrl, // The audio URL
           timestamp: message.timestamp,
         };
         io.to(chatId).emit("receive_message_individual", enrichedMessage);
@@ -71,7 +131,7 @@ router.post(
         msg: "Audio message sent successfully",
         data: {
           chatId,
-          content: fileUrl,
+          content: publicUrl,
         },
       });
     } catch (error) {
@@ -80,18 +140,6 @@ router.post(
     }
   }
 );
-
-
-
-
-
-
-
-
-
-
-
-
 
 router.get("/user-chats", middleware.checkToken, async (req, res) => {
   try {
@@ -400,7 +448,9 @@ router.patch("/delete-message", middleware.checkToken, async (req, res) => {
     res.status(200).json({ msg: "Message deleted successfully." });
   } catch (error) {
     console.error("❌ Error deleting message:", error.message);
-    res.status(500).json({ msg: "Internal server error.", error: error.message });
+    res
+      .status(500)
+      .json({ msg: "Internal server error.", error: error.message });
   }
 });
 
