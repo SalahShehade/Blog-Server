@@ -6,6 +6,7 @@ const User = require("../models/user.model");
 const io = require("../socket"); // Ensure socket.js is exporting the io instance
 const router = express.Router();
 
+//comment for testing firebase storage
 // 1) Bring in multer + path + admin
 const multer = require("multer");
 const path = require("path");
