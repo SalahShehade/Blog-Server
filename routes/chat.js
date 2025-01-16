@@ -14,105 +14,66 @@ const router = express.Router();
 // chat.js
 
 const multer = require("multer");
-const admin = require("../firebase");
-
-// Get reference to the storage bucket
-const bucket = admin.storage().bucket("hajziapp.firebasestorage.app");
-
-const storage = multer.memoryStorage(); // Switch to memory storage
-
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype == "image/jpeg" || file.mimetype == "image/png") {
-    cb(null, true); //callback is true if jpeg or png
-  } else {
-    cb(null, false);
-  }
-};
-const upload = multer({
-  dest: "uploads/audio/",
-  storage: storage,
+const upload = multer({ dest: "uploads/audio/" });
+const uploadFileToFirebase = require("../utils/uploadFileToFirebase"); // <— the function you used for images
+const storage = multer.memoryStorage();
+const audioUpload = multer({
+  storage,
   limits: {
-    fileSize: 1024 * 1024 * 6, //6 MB
+    // 6 MB might be too small for audio, so adjust as needed:
+    fileSize: 1024 * 1024 * 20, // 20 MB, for example
   },
-  //  fileFilter: fileFilter, // orginally any kind of file can be submitted like img,pdf,doc
+  // If you want to restrict only certain MIME types, use fileFilter:
+  // fileFilter: (req, file, cb) => {
+  //   if (file.mimetype.startsWith("audio/")) {
+  //     cb(null, true);
+  //   } else {
+  //     cb(new Error("Only audio files are allowed!"), false);
+  //   }
+  // },
 });
-const uploadFileToFirebase = async (file, destination) => {
-  try {
-    const fileUpload = bucket.file(destination);
-
-    const stream = fileUpload.createWriteStream({
-      metadata: {
-        contentType: file.mimetype,
-      },
-    });
-
-    return new Promise((resolve, reject) => {
-      stream.on("error", (err) => {
-        reject(new Error("Error uploading to Firebase: " + err.message));
-      });
-
-      stream.on("finish", async () => {
-        try {
-          await fileUpload.makePublic();
-          console.log(`File ${destination} is now public.`);
-          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${destination}`;
-          resolve(publicUrl);
-        } catch (err) {
-          console.error(`Failed to make file public: ${err}`);
-          reject(new Error("Error making file public: " + err.message));
-        }
-      });
-
-      stream.end(file.buffer);
-    });
-  } catch (error) {
-    console.error("Error uploading image to Firebase:", error);
-    throw error;
-  }
-};
-
 // POST /chat/send-audio
 router.post(
   "/send-audio",
   middleware.checkToken,
-  upload.single("audioFile"), // "audioFile" is the field name from Flutter
+  audioUpload.single("audioFile"), // "audioFile" must match Flutter field name
   async (req, res) => {
     try {
       const { chatId, receiverEmail } = req.body;
       const senderEmail = req.decoded.email;
 
-      // 1) Make sure file is present
+      // 1) Ensure file is present
       if (!req.file) {
         return res.status(400).json({ msg: "No audio file uploaded." });
       }
 
-      // 2) Build file URL
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/audio/${
-        req.file.filename
-      }`;
+      // 2) Generate a custom path/filename in Firebase
+      //    For instance: "audios/1673626156878.m4a"
+      const extension = path.extname(req.file.originalname) || ".m4a";
+      const destination = `audios/${Date.now()}${extension}`;
 
       // 3) Upload to Firebase
       const publicUrl = await uploadFileToFirebase(req.file, destination);
       console.log("✅ Audio uploaded to Firebase. URL:", publicUrl);
 
-      // 3) Create new message in Mongo
+      // 4) Create new message in Mongo
       const message = new Message({
         chatId,
         senderEmail,
         receiverEmail,
-        content: publicUrl, // We'll store the audio URL in "content"
+        content: publicUrl,
         timestamp: Date.now(),
       });
       await message.save();
 
-      // 4) Update chat with the new message
+      // 5) Update chat with the new message
       await Chat.findByIdAndUpdate(chatId, {
         $push: { messages: message._id },
-        lastMessage: "[Audio Message]", // Optional
+        lastMessage: "[Audio Message]",
         lastMessageTime: Date.now(),
       });
 
-      // 5) Emit real-time event via Socket.IO
+      // 6) Emit real-time event via Socket.IO
       const io = req.app.get("io");
       if (io) {
         const enrichedMessage = {
@@ -120,13 +81,13 @@ router.post(
           chatId,
           senderEmail,
           receiverEmail,
-          content: publicUrl, // The audio URL
+          content: publicUrl,
           timestamp: message.timestamp,
         };
         io.to(chatId).emit("receive_message_individual", enrichedMessage);
       }
 
-      // 6) Send response to client
+      // 7) Return response
       return res.status(201).json({
         msg: "Audio message sent successfully",
         data: {
