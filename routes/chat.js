@@ -15,65 +15,45 @@ const router = express.Router();
 
 const multer = require("multer");
 const upload = multer({ dest: "uploads/audio/" });
-const uploadFileToFirebase = require("../utils/uploadFileToFirebase"); // <— the function you used for images
-const storage = multer.memoryStorage();
-const audioUpload = multer({
-  storage,
-  limits: {
-    // 6 MB might be too small for audio, so adjust as needed:
-    fileSize: 1024 * 1024 * 20, // 20 MB, for example
-  },
-  // If you want to restrict only certain MIME types, use fileFilter:
-  // fileFilter: (req, file, cb) => {
-  //   if (file.mimetype.startsWith("audio/")) {
-  //     cb(null, true);
-  //   } else {
-  //     cb(new Error("Only audio files are allowed!"), false);
-  //   }
-  // },
-});
+
 // POST /chat/send-audio
 router.post(
   "/send-audio",
   middleware.checkToken,
-  audioUpload.single("audioFile"), // "audioFile" must match Flutter field name
+  upload.single("audioFile"), // "audioFile" is the field name from Flutter
   async (req, res) => {
     try {
       const { chatId, receiverEmail } = req.body;
       const senderEmail = req.decoded.email;
 
-      // 1) Ensure file is present
+      // 1) Make sure file is present
       if (!req.file) {
         return res.status(400).json({ msg: "No audio file uploaded." });
       }
 
-      // 2) Generate a custom path/filename in Firebase
-      //    For instance: "audios/1673626156878.m4a"
-      const extension = path.extname(req.file.originalname) || ".m4a";
-      const destination = `audios/${Date.now()}${extension}`;
+      // 2) Build file URL
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/audio/${
+        req.file.filename
+      }`;
 
-      // 3) Upload to Firebase
-      const publicUrl = await uploadFileToFirebase(req.file, destination);
-      console.log("✅ Audio uploaded to Firebase. URL:", publicUrl);
-
-      // 4) Create new message in Mongo
+      // 3) Create new message in Mongo
       const message = new Message({
         chatId,
         senderEmail,
         receiverEmail,
-        content: publicUrl,
+        content: fileUrl, // We'll store the audio URL in "content"
         timestamp: Date.now(),
       });
       await message.save();
 
-      // 5) Update chat with the new message
+      // 4) Update chat with the new message
       await Chat.findByIdAndUpdate(chatId, {
         $push: { messages: message._id },
-        lastMessage: "[Audio Message]",
+        lastMessage: "[Audio Message]", // Optional
         lastMessageTime: Date.now(),
       });
 
-      // 6) Emit real-time event via Socket.IO
+      // 5) Emit real-time event via Socket.IO
       const io = req.app.get("io");
       if (io) {
         const enrichedMessage = {
@@ -81,18 +61,18 @@ router.post(
           chatId,
           senderEmail,
           receiverEmail,
-          content: publicUrl,
+          content: fileUrl, // The audio URL
           timestamp: message.timestamp,
         };
         io.to(chatId).emit("receive_message_individual", enrichedMessage);
       }
 
-      // 7) Return response
+      // 6) Send response to client
       return res.status(201).json({
         msg: "Audio message sent successfully",
         data: {
           chatId,
-          content: publicUrl,
+          content: fileUrl,
         },
       });
     } catch (error) {
