@@ -5,18 +5,74 @@ const middleware = require("../middleware");
 const User = require("../models/user.model");
 const io = require("../socket"); // Ensure socket.js is exporting the io instance
 const router = express.Router();
-//
-/**
- * 🟢 Get all chats for a user
- * This route returns all chats where the current user's email is in the `users` array.
- */
 
-// chat.js
-
+// 1) Bring in multer + path + admin
 const multer = require("multer");
-const upload = multer({ dest: "uploads/audio/" });
+const path = require("path");
+const admin = require("../firebase");
 
-// POST /chat/send-audio
+// 2) Configure Firebase bucket reference (same as in profile.js)
+const bucket = admin.storage().bucket("hajziapp.firebasestorage.app");
+
+// 3) Switch to memoryStorage so we can upload directly to Firebase
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 1024 * 1024 * 10, // 10 MB (adjust as needed)
+  },
+  // If you only want certain audio types, uncomment and adjust the fileFilter:
+  // fileFilter: (req, file, cb) => {
+  //   if (file.mimetype === "audio/mpeg" || file.mimetype === "audio/wav") {
+  //     cb(null, true);
+  //   } else {
+  //     cb(new Error("Unsupported file format"), false);
+  //   }
+  // },
+});
+
+// 4) Helper function to upload file to Firebase Storage (same logic as profile.js)
+const uploadFileToFirebase = async (file, destination) => {
+  try {
+    const fileUpload = bucket.file(destination);
+
+    const stream = fileUpload.createWriteStream({
+      metadata: {
+        contentType: file.mimetype,
+      },
+    });
+
+    return new Promise((resolve, reject) => {
+      stream.on("error", (err) => {
+        reject(new Error("Error uploading to Firebase: " + err.message));
+      });
+
+      stream.on("finish", async () => {
+        try {
+          await fileUpload.makePublic();
+          console.log(`File ${destination} is now public.`);
+          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${destination}`;
+          resolve(publicUrl);
+        } catch (err) {
+          console.error(`Failed to make file public: ${err}`);
+          reject(new Error("Error making file public: " + err.message));
+        }
+      });
+
+      // End the stream by writing the file buffer
+      stream.end(file.buffer);
+    });
+  } catch (error) {
+    console.error("Error uploading audio file to Firebase:", error);
+    throw error;
+  }
+};
+
+/**
+ * POST /chat/send-audio
+ * Uploads audio to Firebase, creates a Message with the public URL,
+ * pushes message to the Chat, and emits via Socket.IO
+ */
 router.post(
   "/send-audio",
   middleware.checkToken,
@@ -26,34 +82,37 @@ router.post(
       const { chatId, receiverEmail } = req.body;
       const senderEmail = req.decoded.email;
 
-      // 1) Make sure file is present
+      // 1) Ensure file is present
       if (!req.file) {
         return res.status(400).json({ msg: "No audio file uploaded." });
       }
 
-      // 2) Build file URL
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/audio/${
-        req.file.filename
-      }`;
+      // 2) Build a Firebase path (mimic your profile.js logic)
+      const ext = path.extname(req.file.originalname); // e.g. ".mp3"
+      const timestamp = Date.now();
+      const firebasePath = `chatAudio/${senderEmail}-${timestamp}${ext}`;
 
-      // 3) Create new message in Mongo
+      // 3) Upload to Firebase & get the public URL
+      const publicUrl = await uploadFileToFirebase(req.file, firebasePath);
+
+      // 4) Create new message in Mongo with the publicUrl
       const message = new Message({
         chatId,
         senderEmail,
         receiverEmail,
-        content: fileUrl, // We'll store the audio URL in "content"
+        content: publicUrl, // Store the public URL in "content"
         timestamp: Date.now(),
       });
       await message.save();
 
-      // 4) Update chat with the new message
+      // 5) Update chat with the new message
       await Chat.findByIdAndUpdate(chatId, {
         $push: { messages: message._id },
-        lastMessage: "[Audio Message]", // Optional
+        lastMessage: "[Audio Message]", // optional
         lastMessageTime: Date.now(),
       });
 
-      // 5) Emit real-time event via Socket.IO
+      // 6) Emit real-time event via Socket.IO
       const io = req.app.get("io");
       if (io) {
         const enrichedMessage = {
@@ -61,18 +120,18 @@ router.post(
           chatId,
           senderEmail,
           receiverEmail,
-          content: fileUrl, // The audio URL
+          content: publicUrl, // The Firebase audio URL
           timestamp: message.timestamp,
         };
         io.to(chatId).emit("receive_message_individual", enrichedMessage);
       }
 
-      // 6) Send response to client
+      // 7) Send response to client
       return res.status(201).json({
         msg: "Audio message sent successfully",
         data: {
           chatId,
-          content: fileUrl,
+          content: publicUrl,
         },
       });
     } catch (error) {
@@ -82,6 +141,10 @@ router.post(
   }
 );
 
+/**
+ * 🟢 Get all chats for a user
+ * This route returns all chats where the current user's email is in the `users` array.
+ */
 router.get("/user-chats", middleware.checkToken, async (req, res) => {
   try {
     const userEmail = req.decoded.email; // Extract user email from the token
@@ -96,25 +159,25 @@ router.get("/user-chats", middleware.checkToken, async (req, res) => {
       ...new Set(chats.flatMap((chat) => chat.users.map((user) => user.email))),
     ];
 
-    // 🔥 Step 3: Get users' data from the database (just the ones in the chat)
+    // 🔥 Step 3: Get users' data from the database
     const usersData = await User.find({ email: { $in: uniqueEmails } });
 
-    // 🔥 Step 4: Map email to username for fast lookups
+    // 🔥 Step 4: Map email to username
     const userMap = new Map(
       usersData.map((user) => [user.email, user.username])
     );
 
     // 🔥 Step 5: Enrich the chats to include the "username" of each user
     const enrichedChats = chats.map((chat) => ({
-      ...chat._doc, // Spread operator to get the existing fields of the chat
+      ...chat._doc,
       users: chat.users.map((user) => ({
         email: user.email,
-        username: userMap.get(user.email) || "Unknown", // Get username from map, default to 'Unknown'
+        username: userMap.get(user.email) || "Unknown",
       })),
     }));
 
-    // 🔥 Step 6: Send the enriched chats to the client
-    res.status(200).json(enrichedChats); // ✅ Send the correct enriched version
+    // 🔥 Step 6: Send the enriched chats
+    res.status(200).json(enrichedChats);
   } catch (error) {
     console.error("❌ Error fetching user chats:", error.message);
     res
@@ -141,7 +204,6 @@ router.get("/existing", middleware.checkToken, async (req, res) => {
     });
 
     if (!existingChat) {
-      // No existing chat found
       return res.status(200).json({ msg: "No existing chat found" });
     }
 
@@ -157,32 +219,30 @@ router.get("/existing", middleware.checkToken, async (req, res) => {
 
 /**
  * 🟢 Create a chat between a user and a shop
- * This route creates a new chat between the current user and a shop owner.
  */
 router.post("/create", middleware.checkToken, async (req, res) => {
   try {
-    const { shopOwnerEmail } = req.body; // ✅ Extract shopOwnerEmail from request body
-    const userEmail = req.decoded.email; // ✅ Extract user's email from the token
+    const { shopOwnerEmail } = req.body;
+    const userEmail = req.decoded.email;
 
-    // ✅ Check if the shop owner exists
+    // Check if the shop owner exists
     const shopOwner = await User.findOne({ email: shopOwnerEmail });
     const currentUser = await User.findOne({ email: userEmail });
 
     if (!shopOwner) {
-      return res.status(404).json({ msg: "Shop owner not found" }); // ✅ Return 404 if shop owner does not exist
+      return res.status(404).json({ msg: "Shop owner not found" });
     }
-
     if (!currentUser) {
-      return res.status(404).json({ msg: "User not found" }); // ✅ Return 404 if the current user does not exist
+      return res.status(404).json({ msg: "User not found" });
     }
 
-    // ✅ Check if the chat already exists
+    // Check if the chat already exists
     const existingChat = await Chat.findOne({
       "users.email": { $all: [userEmail, shopOwnerEmail] },
     });
 
     if (existingChat) {
-      // ✅ Populate the user data for the existing chat
+      // Populate the user data for the existing chat
       const usersData = await User.find({
         email: { $in: existingChat.users.map((u) => u.email) },
       });
@@ -199,10 +259,10 @@ router.post("/create", middleware.checkToken, async (req, res) => {
         })),
       };
 
-      return res.status(200).json(enrichedChat); // ✅ Use 200 for "chat already exists"
+      return res.status(200).json(enrichedChat);
     }
 
-    // ✅ Create a new chat document
+    // Create a new chat document
     const newChat = new Chat({
       users: [
         { email: userEmail, username: currentUser.username },
@@ -210,10 +270,9 @@ router.post("/create", middleware.checkToken, async (req, res) => {
       ],
       shopOwner: shopOwnerEmail,
     });
-
     await newChat.save();
 
-    // ✅ Populate user data for the newly created chat
+    // Populate user data for the newly created chat
     const usersData = await User.find({
       email: { $in: newChat.users.map((u) => u.email) },
     });
@@ -230,35 +289,32 @@ router.post("/create", middleware.checkToken, async (req, res) => {
       })),
     };
 
-    // 🔥 **Emit event for users to join this new chat room**
-    const io = req.app.get("io"); // ✅ Access socket.io instance
-    //io.to(userEmail).emit('join_chat', enrichedChat._id); // 🔥 Emit event to the user to join the new chat
-    //io.to(shopOwnerEmail).emit('join_chat', enrichedChat._id); // 🔥 Emit event to the shop owner to join the chat
+    // 🔥 Emit event for users to join this new chat room (optional)
+    const io = req.app.get("io");
+    // io.to(userEmail).emit('join_chat', enrichedChat._id);
+    // io.to(shopOwnerEmail).emit('join_chat', enrichedChat._id);
 
-    res.status(201).json(enrichedChat); // ✅ Return the enriched chat with a 201 status
+    res.status(201).json(enrichedChat);
   } catch (error) {
-    console.error("❌ Error creating chat:", error); // ✅ Log the error for debugging
+    console.error("❌ Error creating chat:", error);
     res
       .status(500)
-      .json({ msg: "Internal server error", error: error.message }); // ✅ Avoid exposing raw error messages to clients
+      .json({ msg: "Internal server error", error: error.message });
   }
 });
 
 /**
  * 🟢 Send a message in a chat
- * This route allows the current user to send a message in a specific chat.
  */
 router.post("/send-message", middleware.checkToken, async (req, res) => {
   try {
     const { chatId, content, receiverEmail } = req.body;
     const senderEmail = req.decoded.email;
 
-    // 🛠️ **Debug Log** — Log to see if the data is being received properly
     console.log(
       `📩 Creating message with content: ${content} | Chat ID: ${chatId} | Sender: ${senderEmail} | Receiver: ${receiverEmail}`
     );
 
-    // 🔥 Check if the required fields are present
     if (!chatId) {
       return res.status(400).json({ msg: "Chat ID is required." });
     }
@@ -269,13 +325,13 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
       return res.status(400).json({ msg: "Receiver email is required." });
     }
 
-    // 🔥 Check if the chat exists
+    // Check if the chat exists
     const chat = await Chat.findById(chatId);
     if (!chat) {
       return res.status(404).json({ msg: "Chat not found." });
     }
 
-    // 🔥 Check if the receiver is a participant in the chat
+    // Check if the receiver is a participant in the chat
     const isReceiverInChat = chat.users.some(
       (user) => user.email === receiverEmail
     );
@@ -285,7 +341,7 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
         .json({ msg: "Receiver is not a participant in this chat." });
     }
 
-    // 🔥 Create a new message document
+    // Create a new message document
     const message = new Message({
       chatId,
       senderEmail,
@@ -293,11 +349,9 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
       content,
       timestamp: Date.now(),
     });
-
-    // ✅ Save the message first
     await message.save();
 
-    // 🔥 Update the chat with the new message
+    // Update the chat with the new message
     await Chat.findByIdAndUpdate(chatId, {
       $push: { messages: message._id },
       lastMessage: content,
@@ -306,7 +360,7 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
 
     console.log(`✅ Message created successfully: ${message}`);
 
-    // 🔥 Access the socket.io instance
+    // Emit real-time message
     const io = req.app.get("io");
     if (!io) {
       console.error("❌ Socket.io instance not available.");
@@ -315,22 +369,19 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
         .json({ msg: "Internal server error: Socket.io instance is missing." });
     }
 
-    // 🔥 Enrich the message data before emitting
+    // Enrich the message data before emitting
     const sender = await User.findOne({ email: senderEmail });
     const enrichedMessage = {
       _id: message._id,
       chatId: message.chatId,
       senderEmail: message.senderEmail,
-      senderUsername: sender ? sender.username : "Unknown", // 🔥 Add sender username
+      senderUsername: sender ? sender.username : "Unknown",
       receiverEmail: message.receiverEmail,
       content: message.content,
       timestamp: message.timestamp,
     };
 
-    // 🔥 Emit message to all users in the chat room
     try {
-      // io.to(chatId).emit('receive_message', enrichedMessage);
-
       io.to(chatId).emit("receive_message_chatpage", enrichedMessage);
       io.to(chatId).emit("receive_message_individual", enrichedMessage);
 
@@ -341,7 +392,7 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
 
     res.status(201).json({
       msg: "Message sent successfully",
-      messageData: enrichedMessage, // Return enriched message data to the client
+      messageData: enrichedMessage,
     });
   } catch (error) {
     console.error("❌ Error in /send-message route: ", error);
@@ -351,6 +402,9 @@ router.post("/send-message", middleware.checkToken, async (req, res) => {
   }
 });
 
+/**
+ * 🟢 Delete a message (by setting its content to "")
+ */
 router.patch("/delete-message", middleware.checkToken, async (req, res) => {
   try {
     const { messageId } = req.body;
@@ -366,14 +420,14 @@ router.patch("/delete-message", middleware.checkToken, async (req, res) => {
       return res.status(404).json({ msg: "Message not found." });
     }
 
-    // Ensure the requester is the sender of the message
+    // Ensure the requester is the sender
     if (message.senderEmail !== userEmail) {
       return res
         .status(403)
         .json({ msg: "Unauthorized to delete this message." });
     }
 
-    // Update the message content to an empty string
+    // Update the message content
     message.content = "";
     await message.save();
 
@@ -389,50 +443,46 @@ router.patch("/delete-message", middleware.checkToken, async (req, res) => {
     res.status(200).json({ msg: "Message deleted successfully." });
   } catch (error) {
     console.error("❌ Error deleting message:", error.message);
-    res
-      .status(500)
-      .json({ msg: "Internal server error.", error: error.message });
+    res.status(500).json({ msg: "Internal server error.", error: error.message });
   }
 });
 
 /**
  * 🟢 Get all messages for a specific chat
- * This route returns all messages for a specific chat.
  */
 router.get("/messages/:chatId", middleware.checkToken, async (req, res) => {
   try {
     const { chatId } = req.params;
 
-    // ✅ Check if the chat exists and populate its messages
+    // Check if the chat exists and populate its messages
     const chat = await Chat.findById(chatId).populate("messages");
-
     if (!chat) {
-      return res.status(404).json({ msg: "Chat not found" }); // ✅ Return 404 if chat not found
+      return res.status(404).json({ msg: "Chat not found" });
     }
 
-    // ✅ Get all user emails from the messages
+    // Get all user emails from the messages
     const senderEmails = chat.messages.map((message) => message.sender);
-    const uniqueEmails = [...new Set(senderEmails)]; // ✅ Ensure no duplicates for efficient lookup
+    const uniqueEmails = [...new Set(senderEmails)];
 
-    // ✅ Find user data for senders
+    // Find user data for senders
     const usersData = await User.find({ email: { $in: uniqueEmails } });
     const userMap = usersData.reduce((map, user) => {
-      map[user.email] = user.username; // ✅ Map sender's email to username
+      map[user.email] = user.username;
       return map;
     }, {});
 
-    // ✅ Attach sender usernames to each message
+    // Attach sender usernames to each message
     const enrichedMessages = chat.messages.map((message) => ({
-      ...message._doc, // Spread all existing message data
-      senderUsername: userMap[message.sender] || "Unknown", // ✅ Attach username from the userMap
+      ...message._doc,
+      senderUsername: userMap[message.sender] || "Unknown",
     }));
 
-    res.status(200).json(enrichedMessages); // ✅ Return the enriched messages
+    res.status(200).json(enrichedMessages);
   } catch (error) {
-    console.error("❌ Error fetching messages for chat:", error.message); // ✅ Log the error on the server
+    console.error("❌ Error fetching messages for chat:", error.message);
     res
       .status(500)
-      .json({ msg: "Internal server error", error: error.message }); // ✅ Send back proper error message
+      .json({ msg: "Internal server error", error: error.message });
   }
 });
 
