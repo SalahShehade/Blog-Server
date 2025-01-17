@@ -211,7 +211,8 @@ router.route("/verify/:email").get(async (req, res) => {
     console.log("Incoming request to /verify/:email");
     console.log("req.params:", req.params);
 
-    const email = req.params.email;
+    // Convert the email to lowercase
+    const email = req.params.email.toLowerCase();
     if (!email) {
       console.error("Email not provided in params");
       return res.status(400).json({ msg: "Email is required" });
@@ -242,7 +243,7 @@ router.route("/isVerified/:email").get(async (req, res) => {
     console.log("Incoming request to /isVerified/:email");
     console.log("req.params:", req.params);
 
-    const email = req.params.email;
+    const email = req.params.email.toLowerCase();
     if (!email) {
       console.error("Email not provided in params");
       return res.status(400).json({ msg: "Email is required" });
@@ -265,7 +266,9 @@ router.route("/isVerified/:email").get(async (req, res) => {
 
 router.route("/:email").get(middleware.checkToken, async (req, res) => {
   try {
-    const result = await User.findOne({ email: req.params.email });
+    const result = await User.findOne({
+      email: req.params.email.toLowerCase(),
+    });
 
     if (!result) {
       return res.status(404).json({ msg: "User not found" });
@@ -298,7 +301,9 @@ router.route("/:username").get(middleware.checkToken, async (req, res) => {
 router.route("/checkemail/:email").get(async (req, res) => {
   // to check wether the username exists or not
   try {
-    const result = await User.findOne({ email: req.params.email });
+    const result = await User.findOne({
+      email: req.params.email.toLowerCase(),
+    });
 
     if (!result) {
       return res.status(404).json({ msg: "User not found" });
@@ -384,7 +389,7 @@ router.route("/checkusername/:username").get(async (req, res) => {
 
 router.route("/login").post(async (req, res) => {
   try {
-    const result = await User.findOne({ email: req.body.email });
+    const result = await User.findOne({ email: req.body.email.toLowerCase() });
 
     if (result == null) {
       return res.status(403).json({ msg: "Email is incorrect" });
@@ -464,7 +469,7 @@ router.route("/register").post(async (req, res) => {
 
 router.route("/verifyToFalse/:email").post(async (req, res) => {
   try {
-    const email = req.params.email;
+    const email = req.params.email.toLowerCase();
     const result = await User.findOneAndUpdate(
       { email },
       { $set: { verified: false } },
@@ -488,7 +493,7 @@ router.route("/update/:email").patch(async (req, res) => {
   try {
     // Find the user by email and update both the password and verified fields
     const result = await User.findOneAndUpdate(
-      { email: req.params.email },
+      { email: req.params.email.toLowerCase() },
       {
         $set: {
           password: req.body.password,
@@ -577,7 +582,7 @@ router.route("/updateRole/:email").patch(async (req, res) => {
 
     // Update the user's role
     const result = await User.findOneAndUpdate(
-      { email: req.params.email },
+      { email: req.params.email.toLowerCase() },
       { $set: { role: role } },
       { new: true } // Return the updated document
     );
