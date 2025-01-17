@@ -384,8 +384,10 @@ router.route("/checkusername/:username").get(async (req, res) => {
 
 router.route("/login").post(async (req, res) => {
   try {
-    const result = await User.findOne({ email: req.body.email });
-
+    // Use a case-insensitive regex to find the email
+    const result = await User.findOne({
+      email: { $regex: new RegExp(`^${req.body.email}$`, "i") },
+    });
     if (result == null) {
       return res.status(403).json({ msg: "Email is incorrect" });
     }
