@@ -152,7 +152,10 @@ router.route("/ban/:email").patch(async (req, res) => {
   const email = req.params.email;
 
   try {
-    const user = await User.findOne({ email });
+    const email = req.params.email;
+    const user = await User.findOne({
+      email: { $regex: new RegExp(`^${email}$`, "i") },
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -218,7 +221,7 @@ router.route("/verify/:email").get(async (req, res) => {
     }
 
     const result = await User.findOneAndUpdate(
-      { email: email },
+      { email: { $regex: new RegExp(`^${email}$`, "i") } },
       { $set: { verified: true } },
       { new: true }
     );
@@ -268,7 +271,10 @@ router.route("/isVerified/:email").get(async (req, res) => {
 
 router.route("/:email").get(middleware.checkToken, async (req, res) => {
   try {
-    const result = await User.findOne({ email: req.params.email });
+    const email = req.params.email;
+    const result = await User.findOne({
+      email: { $regex: new RegExp(`^${email}$`, "i") },
+    });
 
     if (!result) {
       return res.status(404).json({ msg: "User not found" });
@@ -301,7 +307,10 @@ router.route("/:username").get(middleware.checkToken, async (req, res) => {
 router.route("/checkemail/:email").get(async (req, res) => {
   // to check wether the username exists or not
   try {
-    const result = await User.findOne({ email: req.params.email });
+    const email = req.params.email;
+    const result = await User.findOne({
+      email: { $regex: new RegExp(`^${email}$`, "i") },
+    });
 
     if (!result) {
       return res.status(404).json({ msg: "User not found" });
@@ -471,7 +480,7 @@ router.route("/verifyToFalse/:email").post(async (req, res) => {
   try {
     const email = req.params.email;
     const result = await User.findOneAndUpdate(
-      { email },
+      { email: { $regex: new RegExp(`^${email}$`, "i") } },
       { $set: { verified: false } },
       { new: true }
     );
@@ -580,11 +589,12 @@ router.route("/updateRole/:email").patch(async (req, res) => {
       return res.status(400).json({ msg: "Invalid role provided" });
     }
 
-    // Update the user's role
+    const email = req.params.email;
+    // Update the user's role with a case-insensitive search query
     const result = await User.findOneAndUpdate(
-      { email: req.params.email },
+      { email: { $regex: new RegExp(`^${email}$`, "i") } },
       { $set: { role: role } },
-      { new: true } // Return the updated document
+      { new: true }
     );
 
     if (!result) {
