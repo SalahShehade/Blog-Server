@@ -152,10 +152,7 @@ router.route("/ban/:email").patch(async (req, res) => {
   const email = req.params.email;
 
   try {
-    const email = req.params.email;
-    const user = await User.findOne({
-      email: { $regex: new RegExp(`^${email}$`, "i") },
-    });
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -221,7 +218,7 @@ router.route("/verify/:email").get(async (req, res) => {
     }
 
     const result = await User.findOneAndUpdate(
-      { email: { $regex: new RegExp(`^${email}$`, "i") } },
+      { email: email },
       { $set: { verified: true } },
       { new: true }
     );
@@ -251,10 +248,7 @@ router.route("/isVerified/:email").get(async (req, res) => {
       return res.status(400).json({ msg: "Email is required" });
     }
 
-    // Use a case-insensitive regex to find the email
-    const result = await User.findOne({
-      email: { $regex: new RegExp(`^${email}$`, "i") },
-    });
+    const result = await User.findOne({ email: email });
 
     if (!result) {
       console.error("No user found with email:", email);
@@ -271,10 +265,7 @@ router.route("/isVerified/:email").get(async (req, res) => {
 
 router.route("/:email").get(middleware.checkToken, async (req, res) => {
   try {
-    const email = req.params.email;
-    const result = await User.findOne({
-      email: { $regex: new RegExp(`^${email}$`, "i") },
-    });
+    const result = await User.findOne({ email: req.params.email });
 
     if (!result) {
       return res.status(404).json({ msg: "User not found" });
@@ -307,10 +298,7 @@ router.route("/:username").get(middleware.checkToken, async (req, res) => {
 router.route("/checkemail/:email").get(async (req, res) => {
   // to check wether the username exists or not
   try {
-    const email = req.params.email;
-    const result = await User.findOne({
-      email: { $regex: new RegExp(`^${email}$`, "i") },
-    });
+    const result = await User.findOne({ email: req.params.email });
 
     if (!result) {
       return res.status(404).json({ msg: "User not found" });
@@ -396,10 +384,8 @@ router.route("/checkusername/:username").get(async (req, res) => {
 
 router.route("/login").post(async (req, res) => {
   try {
-    // Use a case-insensitive regex to find the email
-    const result = await User.findOne({
-      email: { $regex: new RegExp(`^${req.body.email}$`, "i") },
-    });
+    const result = await User.findOne({ email: req.body.email });
+
     if (result == null) {
       return res.status(403).json({ msg: "Email is incorrect" });
     }
@@ -480,7 +466,7 @@ router.route("/verifyToFalse/:email").post(async (req, res) => {
   try {
     const email = req.params.email;
     const result = await User.findOneAndUpdate(
-      { email: { $regex: new RegExp(`^${email}$`, "i") } },
+      { email },
       { $set: { verified: false } },
       { new: true }
     );
@@ -502,7 +488,7 @@ router.route("/update/:email").patch(async (req, res) => {
   try {
     // Find the user by email and update both the password and verified fields
     const result = await User.findOneAndUpdate(
-      { email: { $regex: new RegExp(`^${email}$`, "i") } },
+      { email: req.params.email },
       {
         $set: {
           password: req.body.password,
@@ -589,12 +575,11 @@ router.route("/updateRole/:email").patch(async (req, res) => {
       return res.status(400).json({ msg: "Invalid role provided" });
     }
 
-    const email = req.params.email;
-    // Update the user's role with a case-insensitive search query
+    // Update the user's role
     const result = await User.findOneAndUpdate(
-      { email: { $regex: new RegExp(`^${email}$`, "i") } },
+      { email: req.params.email },
       { $set: { role: role } },
-      { new: true }
+      { new: true } // Return the updated document
     );
 
     if (!result) {
