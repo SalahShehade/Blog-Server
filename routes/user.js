@@ -248,7 +248,10 @@ router.route("/isVerified/:email").get(async (req, res) => {
       return res.status(400).json({ msg: "Email is required" });
     }
 
-    const result = await User.findOne({ email: email });
+    // Use a case-insensitive regex to find the email
+    const result = await User.findOne({
+      email: { $regex: new RegExp(`^${email}$`, "i") },
+    });
 
     if (!result) {
       console.error("No user found with email:", email);
@@ -490,7 +493,7 @@ router.route("/update/:email").patch(async (req, res) => {
   try {
     // Find the user by email and update both the password and verified fields
     const result = await User.findOneAndUpdate(
-      { email: req.params.email },
+      { email: { $regex: new RegExp(`^${email}$`, "i") } },
       {
         $set: {
           password: req.body.password,
