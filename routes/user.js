@@ -434,6 +434,9 @@ router.route("/register").post(async (req, res) => {
   try {
     const { username, password, email, role } = req.body;
 
+    // Convert email to lowercase to ensure consistent storage
+    email = email.toLowerCase();
+
     // Restrict role assignment
     const validRoles = ["user", "customer", "admin"];
     if (role && !validRoles.includes(role)) {
