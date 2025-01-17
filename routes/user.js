@@ -432,7 +432,7 @@ router.route("/login").post(async (req, res) => {
 
 router.route("/register").post(async (req, res) => {
   try {
-    const { username, password, email, role } = req.body;
+    let { username, password, email, role } = req.body;
 
     // Convert email to lowercase to ensure consistent storage
     email = email.toLowerCase();
