@@ -444,7 +444,9 @@ router.patch("/delete-message", middleware.checkToken, async (req, res) => {
     res.status(200).json({ msg: "Message deleted successfully." });
   } catch (error) {
     console.error("❌ Error deleting message:", error.message);
-    res.status(500).json({ msg: "Internal server error.", error: error.message });
+    res
+      .status(500)
+      .json({ msg: "Internal server error.", error: error.message });
   }
 });
 
