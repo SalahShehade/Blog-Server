@@ -20,7 +20,7 @@ const User = Schema({
 
   role: {
     type: String,
-    enum: ["user", "shop owner", "admin"], // Role options
+    enum: ["user", "customer", "admin"], // Role options
     default: "user", // Default to 'user'
   },
 
