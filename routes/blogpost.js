@@ -193,6 +193,28 @@ router.get("/countUserShops", middleware.checkToken, async (req, res) => {
   }
 });
 
+router.get(
+  "/getShopsByEmail/:email",
+  middleware.checkToken,
+  async (req, res) => {
+    try {
+      const { email } = req.params;
+      // Find all blogposts/shops belonging to this user
+      const shops = await BlogPost.find({ email: email });
+      if (!shops) {
+        return res.status(404).json({ msg: "No shops found for this user" });
+      }
+      res.status(200).json({ data: shops });
+    } catch (error) {
+      console.error("Error fetching shops by email:", error);
+      res.status(500).json({
+        msg: "Internal server error",
+        error: error.message,
+      });
+    }
+  }
+);
+
 /**
  * Get the rating info for a blog post
  * @route GET /blogpost/ratinginfo/:id
