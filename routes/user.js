@@ -179,40 +179,6 @@ router.route("/ban/:email").patch(async (req, res) => {
   }
 });
 
-// Add this route after your existing update routes
-router
-  .route("/updateFCM/:email")
-  .patch(middleware.checkToken, async (req, res) => {
-    try {
-      const email = req.params.email.toLowerCase();
-      const { token } = req.body;
-
-      if (!token) {
-        return res.status(400).json({ message: "FCM token is required" });
-      }
-
-      const user = await User.findOneAndUpdate(
-        { email: email },
-        { $set: { fcmToken: token } },
-        { new: true }
-      );
-
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      res.status(200).json({
-        message: "FCM token updated successfully",
-        email: user.email,
-        fcmToken: user.fcmToken,
-      });
-    } catch (error) {
-      res.status(500).json({
-        message: "Failed to update FCM token",
-        error: error.message,
-      });
-    }
-  });
 router.route("/getUsers").get(middleware.checkToken, async (req, res) => {
   try {
     const { role } = req.decoded; // Assuming the role is stored in the decoded JWT

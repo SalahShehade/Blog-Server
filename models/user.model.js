@@ -24,10 +24,6 @@ const User = Schema(
       enum: ["user", "customer", "admin"], // Role options
       default: "user", // Default to 'user'
     },
-    fcmToken: {
-      type: String,
-      default: "",
-    },
 
     verified: {
       type: Boolean,

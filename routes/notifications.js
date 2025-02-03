@@ -66,33 +66,6 @@ router.post("/notifyAdmins/:email", async (req, res) => {
   }
 });
 
-// Add this new route for appointment reminders
-router.post("/appointmentReminder", async (req, res) => {
-  const { email, minutes } = req.body;
-
-  try {
-    // Get user's FCM token from your database
-    const user = await User.findOne({ email });
-    if (!user || !user.fcmToken) {
-      return res.status(404).json({ message: "User token not found" });
-    }
-
-    const message = {
-      notification: {
-        title: "Appointment Reminder",
-        body: `Your appointment starts in ${minutes} minutes!`,
-      },
-      token: user.fcmToken,
-    };
-
-    await admin.messaging().send(message);
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error("Error sending reminder:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 // Define the notifyAdmins route
 router.post("/notifyAdmins/customer/:email", async (req, res) => {
   const email = req.params.email;
